@@ -31,7 +31,7 @@ def validacion_de_coordenada(objetivo, n):
     """
     Objetivo: Validar si la coordenada (z, y, x) es válida (z, y, x) dentro del cubo.
     Parámetros:
-        - Objetivo(tupla): Coordenada en (x, y, z) del disparo.
+        - Objetivo(tuple): Coordenada en (x, y, z) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
         bool: True si la coordenada es válida, False en caso contrario.
@@ -55,7 +55,7 @@ def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
-        - Objetivo(tupla): Coordenada en (z, y, x) del disparo.
+        - Objetivo(tuple): Coordenada en (z, y, x) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
@@ -75,7 +75,7 @@ def obtener_celdas_afectadas(arma, objetivo, n):
     Objetivo: Determinar la celda impactada según el arma.
     Parámetros:
         - Arma(str): Identificador del arma.
-        - Objetivo(tupla): Coordenada en (z, y, x) del disparo.
+        - Objetivo(tuple): Coordenada en (z, y, x) del disparo.
         - n(int): Tamaño del cubo.
     Devuelve:
         list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
