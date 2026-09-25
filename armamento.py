@@ -23,6 +23,7 @@ def obtener_catalogo_armas():
     Devuelve:
         list: Lista de tuplas con el catálogo de armas.
     """
+    
     return CATALOGO_ARMAS
 
 
@@ -35,6 +36,7 @@ def validacion_de_coordenada(objetivo, n):
     Devuelve:
         bool: True si la coordenada es válida, False en caso contrario.
     """
+
     if len(objetivo) != 3:
         return False
 
@@ -58,6 +60,7 @@ def efecto_torpedo(objetivo, n):
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
+
     if not validacion_de_coordenada(objetivo, n):
         return False
 
@@ -68,10 +71,19 @@ DESPACHO_ARMAS = [
 ]
 
 def obtener_celdas_afectadas(arma, objetivo, n):
-
+    """
+    Objetivo: Determinar la celda impactada según el arma.
+    Parámetros:
+        - Arma(str): Identificador del arma.
+        - Objetivo(tupla): Coordenada en (z, y, x) del disparo.
+        - n(int): Tamaño del cubo.
+    Devuelve:
+        list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
+    """
 
     for letra, funcion_disparo in DESPACHO_ARMAS:
         if letra == arma:
             return funcion_disparo(objetivo, n)
 
+    return []
 
