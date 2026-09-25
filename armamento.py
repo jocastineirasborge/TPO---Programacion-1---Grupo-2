@@ -16,20 +16,31 @@ CATALOGO_ARMAS = [
 
 #Utilizamos lista de tuplas temporalmente dado que todavía no hemos visto diccionarios.
 
+
+def obtener_catalogo_armas():
+    """
+    Objetivo: Devolver la lista de catálogo de armas disponible.
+    Devuelve:
+        list: Lista de tuplas con el catálogo de armas.
+    """
+    return CATALOGO_ARMAS
+
+
 def validacion_de_coordenada(objetivo, n):
     """
-    Objetivo: Validar si la coordenada (x, y, z) es válida (x, y, z) dentro del cubo.
+    Objetivo: Validar si la coordenada (z, y, x) es válida (z, y, x) dentro del cubo.
     Parámetros:
         - Objetivo(tupla): Coordenada en (x, y, z) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
-        List: Lista que contiene la coordenada en formato tupla del punto apuntado.
+        bool: True si la coordenada es válida, False en caso contrario.
     """
     if len(objetivo) != 3:
         return False
 
-    x, y, z = objetivo
-    if type(x) is not int or type(y) is not int or type(z) is not int:
+    z, y, x = objetivo
+
+    if type(z) is not int or type(y) is not int or type(x) is not int:
         return False
 
     if not (1 <= x <= n and 1 <= y <= n and 1 <= z <= n):
@@ -42,14 +53,25 @@ def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
-        - Objetivo(tupla): Coordenada en (x, y, z) del disparo.
+        - Objetivo(tupla): Coordenada en (z, y, x) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
-
     if not validacion_de_coordenada(objetivo, n):
         return False
 
-    return objetivo
+    return [objetivo]
+
+DESPACHO_ARMAS = [
+    ("T", efecto_torpedo)
+]
+
+def obtener_celdas_afectadas(arma, objetivo, n):
+
+
+    for letra, funcion_disparo in DESPACHO_ARMAS:
+        if letra == arma:
+            return funcion_disparo(objetivo, n)
+
 
