@@ -13,4 +13,6 @@ def busqueda_lineal_nave(cubo, identificador_nave, n):
             for y in range(0, n):
                 comparaciones += 1
                 if cubo[z][x][y] == identificador_nave:
-                    coordenadas_encontradas.append(z + 1, x + 1, y + 1)
+                    coordenadas_encontradas.append((z + 1, x + 1, y + 1))
+
+    return coordenadas_encontradas, comparaciones
