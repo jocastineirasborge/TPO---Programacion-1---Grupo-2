@@ -45,7 +45,7 @@ DESCRIPCIONES = {
 }
 
 # ------------------------------------------------------------------
-# Tamanio del cubo
+# Tamaño del cubo
 # ------------------------------------------------------------------
 N_POR_DEFECTO = 8
 N_MINIMO = 5    # el portaaviones ocupa 5 celdas en linea recta
@@ -54,15 +54,16 @@ N_MAXIMO = 20   # limite para que el dibujo por consola siga siendo legible
 # Punto tipeado: tres numeros separados por comas (se toleran espacios)
 PATRON_PUNTO = r"^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$"
 
-
 # ------------------------------------------------------------------
 # Cubo y validacion de puntos
 # ------------------------------------------------------------------
-def crear_cubo(n=N_POR_DEFECTO):
-    """Objetivo: crear un cubo de n x n x n con todas las celdas sin explorar.
+def crear_cubo(n = N_POR_DEFECTO):
+    """
+    Objetivo: crear un cubo de n x n x n con todas las celdas sin explorar.
     Parametros: n (int) tamanio de cada eje, entre N_MINIMO y N_MAXIMO.
     Salida: el cubo (lista de listas de listas) o None si n no es valido.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if type(n) != int or n < N_MINIMO or n > N_MAXIMO:
         return None
     cubo = []
@@ -78,16 +79,17 @@ def crear_cubo(n=N_POR_DEFECTO):
 
 
 def tamanio_cubo(cubo):
-    """Objetivo: informar el tamanio N del cubo.
+    """Objetivo: informar el tamaño N del cubo.
     Parametros: cubo.
     Salida: N (int).
     Excepciones: ninguna."""
     return len(cubo)
 
 
-def es_punto_valido(cubo, punto):
-    """Objetivo: verificar que un punto exista dentro del cubo.
-    Parametros: cubo y punto (tupla z, x, y).
+def validacion_de_coordenada(cubo, punto):
+    """
+    Objetivo: verificar que un punto exista dentro del cubo.
+    Parámetros: cubo y punto (tupla z, x, y).
     Salida: True si es una tupla de 3 enteros entre 1 y N; False si no.
     Excepciones: ninguna."""
     if type(punto) != tuple or len(punto) != 3:
@@ -194,7 +196,7 @@ def obtener_capa(cubo, z):
     return capa
 
 
-def transponer(matriz):
+def trasponer(matriz):
     """Objetivo: intercambiar filas por columnas.
     Parametros: matriz de m x n.
     Salida: matriz nueva de n x m (T[j][i] = A[i][j]).
@@ -314,7 +316,7 @@ def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
     if capa is None:
         return None
     # La capa esta indexada [x][y]; para mostrar filas y y columnas x se transpone.
-    vista = transponer(capa)
+    vista = trasponer(capa)
     n = len(vista)
     ancho = len("y" + str(n)) + 1
 

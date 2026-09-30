@@ -51,31 +51,6 @@ def obtener_catalogo_armas():
     
     return CATALOGO_ARMAS
 
-
-def validacion_de_coordenada(objetivo, n):
-    """
-    Objetivo: Validar si la coordenada (z, y, x) es válida (z, y, x) dentro del cubo.
-    Parámetros:
-        - Objetivo(tuple): Coordenada en (x, y, z) del disparo.
-        - n(int): Tamaño del cubo para validación.
-    Devuelve:
-        bool: True si la coordenada es válida, False en caso contrario.
-    """
-
-    if len(objetivo) != 3:
-        return False
-
-    z, y, x = objetivo
-
-    if type(z) != int or type(y) != int or type(x) != int:
-        return False
-
-    if not (1 <= x <= n and 1 <= y <= n and 1 <= z <= n):
-        return False
-
-    return True
-
-
 def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
@@ -85,11 +60,11 @@ def efecto_torpedo(objetivo, n):
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
+    z, x, y = objetivo
+    if 1 <= z <= n and 1 <= x <= n and 1 <= y <= n:
+        return [objetivo]
 
-    if not validacion_de_coordenada(objetivo, n):
-        return False
-
-    return [objetivo]
+    return []
 
 def efecto_misil_de_racimo(objetivo, n):
     """

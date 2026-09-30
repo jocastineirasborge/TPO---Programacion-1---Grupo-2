@@ -1,6 +1,23 @@
 """Módulo para la partida"""
-```python
 import random
+from tablero import (
+    crear_cubo,
+    dibujar_cubo,
+    texto_a_punto,
+    texto_a_tramo,
+    escribir_celda,
+    IMPACTO,
+    HUNDIDO,
+    AGUA_MARCADA
+)
+from flota import (
+    ubicar_nave,
+    ubicacion_automatica,
+    obtener_catalogo_naves
+)
+from radar import busqueda_lineal_nave
+from armamento import obtener_celdas_afectadas, obtener_catalogo_armas
+from registro import inicializar_registro, registrar_turno
 
 # EXCEPCIÓN PROPIA
 class ErrorPartida(Exception):
@@ -12,25 +29,15 @@ NAVE = "N"
 IMPACTO = "X"
 HUNDIDO = "#"
 TAMANO_CUBO = 8
-NAVES = {"F": {"nombre": "Fragata", "celdas": 3, "cantidad": 2},
+NAVES = {
+    "F": {"nombre": "Fragata", "celdas": 3, "cantidad": 2},
     "D": {"nombre": "Destructor", "celdas": 2, "cantidad": 2},
     "S": {"nombre": "Submarino", "celdas": 2, "cantidad": 2},
     "C": {"nombre": "Crucero", "celdas": 4, "cantidad": 1},
     "P": {"nombre": "Portaaviones", "celdas": 5, "cantidad": 1},
-    "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}}
+    "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
+    }
 
-# CUBO
-def crear_cubo(n):
-    cubo = []
-    for z in range(n):
-        capa = []
-        for x in range(n):
-            fila = []
-            for y in range(n):
-                fila.append(AGUA)
-            capa.append(fila)
-        cubo.append(capa)
-    return cubo
 def validar_punto(punto, n):
     partes = punto.split(",")
     if len(partes) != 3:
@@ -44,6 +51,7 @@ def validar_punto(punto, n):
     return (1 <= z <= n
         and 1 <= x <= n
         and 1 <= y <= n)
+
 def convertir_punto(punto):
     partes = punto.split(",")
     z = int(partes[0]) - 1
@@ -72,18 +80,21 @@ def obtener_celdas(desde, hasta):
             celdas.append((z1, x1, y))
         return celdas
     return []
+
 def celdas_ocupadas(flota):
     ocupadas = []
     for nave in flota:
         for celda in nave["celdas"]:
             ocupadas.append(celda)
     return ocupadas
+
 def estan_cerca(celda1, celda2):
     z1, x1, y1 = celda1
     z2, x2, y2 = celda2
     return (abs(z1 - z2) <= 1
         and abs(x1 - x2) <= 1
         and abs(y1 - y2) <= 1)
+
 def validar_distancia(celdas, flota):
     ocupadas = celdas_ocupadas(flota)
     for nueva in celdas:
@@ -91,6 +102,7 @@ def validar_distancia(celdas, flota):
             if estan_cerca(nueva, ocupada):
                 return False
     return True
+
 def validar_restriccion(letra, celdas, n):
     for z, x, y in celdas:
         z_real = z + 1
@@ -104,6 +116,7 @@ def validar_restriccion(letra, celdas, n):
             if z_real <= n // 2:
                 return False
     return True
+
 def ubicar_nave(cubo, flota, letra, desde, hasta):
     n = len(cubo)
     if letra not in NAVES:
@@ -132,6 +145,7 @@ def ubicar_nave(cubo, flota, letra, desde, hasta):
         cubo[z][x][y] = NAVE
     flota.append({"letra": letra,"celdas": celdas,"impactos": 0,"hundida": False})
     return True
+
 def ubicar_estacion(cubo, flota, punto):
     n = len(cubo)
     if not validar_punto(punto, n):
@@ -215,49 +229,67 @@ def crear_jugador(n):
 # FUNCIONES PÚBLICAS OBLIGATORIAS
 def nueva_partida_1v1(configuracion):
     n = configuracion.get("n", TAMANO_CUBO)
-    return {"tipo": "1v1",
+
+    return {
+        "tipo": "1v1",
         "n": n,
-        "jugadores": [crear_jugador(n),
-            crear_jugador(n)],
+        "jugadores": [crear_jugador(n),crear_jugador(n)],
         "turno": 0,
         "terminada": False,
-        "ganador": None}
+        "ganador": None
+        }
+
 def nueva_partida_vs_maquina(configuracion, dificultad):
-n = configuracion.get("n", TAMANO_CUBO)
-    return {"tipo": "vs_maquina",
+    n = configuracion.get("n", TAMANO_CUBO)
+
+    return {
+        "tipo": "vs_maquina",
         "dificultad": dificultad,
         "n": n,
-        "jugadores": [crear_jugador(n),
-            crear_jugador(n)],
+        "jugadores": [crear_jugador(n), crear_jugador(n)],
         "turno": 0,
         "terminada": False,
-        "ganador": None}
+        "ganador": None
+        }
+
 def buscar_nave(flota, celda):
     for nave in flota:
         if celda in nave["celdas"]:
             return nave
     return None
+
 def disparar(estado, jugador, objetivo):
     n = estado["n"]
+
     if not validar_punto(objetivo, n):
         raise ErrorPartida("Objetivo inválido")
+    
     celda = convertir_punto(objetivo)
+
     if celda in estado["jugadores"][jugador]["disparos"]:
         raise ErrorPartida("Ya se disparó a esa celda")
+    
     estado["jugadores"][jugador]["disparos"].append(celda)
     rival = 1 - jugador
     nave = buscar_nave(estado["jugadores"][rival]["flota"],celda)
+
     if nave is None:
         return "Agua."
+    
     nave["impactos"] += 1
     z, x, y = celda
     estado["jugadores"][rival]["cubo"][z][x][y] = IMPACTO
+
     if nave["impactos"] >= len(nave["celdas"]):
         nave["hundida"] = True
+
         for z2, x2, y2 in nave["celdas"]:
             estado["jugadores"][rival]["cubo"][z2][x2][y2] = HUNDIDO
+
         return "Hundido"
+    
     return "Impacto"
+
 def ejecutar_turno(estado, jugada):
     if estado["terminada"]:
         raise ErrorPartida("La partida ya terminó")
@@ -458,6 +490,7 @@ def partida_vs_maquina(estado):
 
 # MENÚ PRINCIPAL
 def menu_principal():
+
     while True:
         print("==============================")
         print("       OPERACION CUBO")
@@ -468,26 +501,28 @@ def menu_principal():
         print("4 - Continuar una partida guardada")
         print("5 - Salir")
         opcion = input("Opción: ")
+
         if opcion == "1":
             estado = preparar_1v1()
             input("\nPresione ENTER para comenzar...")
             partida_1v1(estado)
+
         elif opcion == "2":
             estado = preparar_vs_maquina()
             input("\nPresione ENTER para comenzar...")
             partida_vs_maquina(estado)
+
         elif opcion == "3":
             print("Máquina contra máquina "
                 "corresponde a una entrega posterior")
+            
         elif opcion == "4":
             print("Continuar partida guardada "
                 "corresponde a una entrega posterior")
+            
         elif opcion == "5":
             print("Programa finalizado")
             break
+        
         else:
             print("Opción inválida")
-
-# INICIO
-if __name__ == "__main__":
-    menu_principal()
