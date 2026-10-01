@@ -86,7 +86,7 @@ def tamanio_cubo(cubo):
     return len(cubo)
 
 
-def validacion_de_coordenada(cubo, punto):
+def es_punto_valido(cubo, punto):
     """
     Objetivo: verificar que un punto exista dentro del cubo.
     Parámetros: cubo y punto (tupla z, x, y).
@@ -105,12 +105,15 @@ def validacion_de_coordenada(cubo, punto):
 
 
 def texto_a_punto(texto, cubo):
-    """Objetivo: convertir un punto tipeado ("3,5,4") en una tupla validada.
+    """
+    Objetivo: convertir un punto tipeado ("3,5,4") en una tupla validada.
     Parametros: texto (str) en el orden z,x,y y el cubo donde debe existir.
     Salida: tupla (z, x, y) o None si el formato o el rango no son validos.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if type(texto) != str:
         return None
+    
     coincidencia = re.match(PATRON_PUNTO, texto)
     if coincidencia is None:
         return None
@@ -120,6 +123,7 @@ def texto_a_punto(texto, cubo):
     punto = (z, x, y)
     if not es_punto_valido(cubo, punto):
         return None
+    
     return punto
 
 
@@ -181,10 +185,12 @@ def escribir_celda(cubo, punto, estado):
 # Operaciones de matrices
 # ------------------------------------------------------------------
 def obtener_capa(cubo, z):
-    """Objetivo: obtener una copia de la capa z del cubo.
+    """
+    Objetivo: obtener una copia de la capa z del cubo.
     Parametros: cubo y z (int entre 1 y N).
     Salida: matriz de N x N indexada [x][y], o None si z no es valido.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if type(z) != int or z < 1 or z > len(cubo):
         return None
     capa = []
@@ -197,10 +203,12 @@ def obtener_capa(cubo, z):
 
 
 def trasponer(matriz):
-    """Objetivo: intercambiar filas por columnas.
+    """
+    Objetivo: intercambiar filas por columnas.
     Parametros: matriz de m x n.
     Salida: matriz nueva de n x m (T[j][i] = A[i][j]).
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if len(matriz) == 0:
         return []
     filas = len(matriz)
@@ -215,10 +223,12 @@ def trasponer(matriz):
 
 
 def copiar_cubo(cubo):
-    """Objetivo: crear una copia profunda e independiente del cubo.
+    """
+    Objetivo: crear una copia profunda e independiente del cubo.
     Parametros: cubo.
     Salida: cubo nuevo; modificarlo no afecta al original.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     copia = []
     for z in range(0, len(cubo)):
         capa = []
@@ -232,10 +242,12 @@ def copiar_cubo(cubo):
 
 
 def contar_en_matriz(matriz, estado):
-    """Objetivo: contar cuantas celdas de una matriz tienen un estado.
+    """
+    Objetivo: contar cuantas celdas de una matriz tienen un estado.
     Parametros: matriz y estado.
     Salida: cantidad (int).
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     cantidad = 0
     for fila in range(0, len(matriz)):
         for columna in range(0, len(matriz[fila])):
@@ -245,10 +257,12 @@ def contar_en_matriz(matriz, estado):
 
 
 def contar_estado(cubo, estado):
-    """Objetivo: contar cuantas celdas de todo el cubo tienen un estado.
+    """
+    Objetivo: contar cuantas celdas de todo el cubo tienen un estado.
     Parametros: cubo y estado.
     Salida: cantidad (int).
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     total = 0
     for z in range(0, len(cubo)):
         total = total + contar_en_matriz(cubo[z], estado)
@@ -256,11 +270,13 @@ def contar_estado(cubo, estado):
 
 
 def vista_rival(cubo):
-    """Objetivo: obtener el cubo tal como lo ve el rival (sin naves ocultas).
+    """
+    Objetivo: obtener el cubo tal como lo ve el rival (sin naves ocultas).
     Parametros: cubo.
     Salida: cubo nuevo donde NAVE_OCULTA se reemplaza por SIN_EXPLORAR.
     Sirve para que la maquina decida sin "espiar" la flota.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     vista = copiar_cubo(cubo)
     for z in range(0, len(vista)):
         for x in range(0, len(vista[z])):
@@ -274,10 +290,12 @@ def vista_rival(cubo):
 # Dibujo
 # ------------------------------------------------------------------
 def completar(texto, ancho):
-    """Objetivo: agregar espacios a la derecha hasta llegar a un ancho.
+    """
+    Objetivo: agregar espacios a la derecha hasta llegar a un ancho.
     Parametros: texto (str) y ancho (int).
     Salida: cadena de al menos ese ancho.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     faltan = ancho - len(texto)
     if faltan > 0:
         return texto + " " * faltan
@@ -285,20 +303,24 @@ def completar(texto, ancho):
 
 
 def simbolo_de(estado, mostrar_naves):
-    """Objetivo: obtener el simbolo con el que se dibuja un estado.
+    """
+    Objetivo: obtener el simbolo con el que se dibuja un estado.
     Parametros: estado y mostrar_naves (bool); si es False la nave se ve como agua.
     Salida: simbolo (str de un caracter).
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if estado == NAVE_OCULTA and not mostrar_naves:
         return SIMBOLOS[SIN_EXPLORAR]
     return SIMBOLOS[estado]
 
 
 def texto_referencias(mostrar_naves):
-    """Objetivo: armar la linea de referencias de simbolos.
+    """
+    Objetivo: armar la linea de referencias de simbolos.
     Parametros: mostrar_naves (bool); si es False no se incluye la nave propia.
     Salida: cadena con las referencias.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     partes = []
     for i in range(0, len(ESTADOS)):
         estado = ESTADOS[i]
@@ -308,14 +330,16 @@ def texto_referencias(mostrar_naves):
 
 
 def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
-    """Objetivo: armar el dibujo de la capa z (filas y, columnas x).
+    """
+    Objetivo: armar el dibujo de la capa z (filas y, columnas x).
     Parametros: cubo, z (int), mostrar_naves (bool) y con_referencias (bool).
     Salida: cadena lista para imprimir, o None si z no es valido.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     capa = obtener_capa(cubo, z)
     if capa is None:
         return None
-    # La capa esta indexada [x][y]; para mostrar filas y y columnas x se transpone.
+    # La capa esta indexada [x][y]; para mostrar filas y y columnas x se traspone.
     vista = trasponer(capa)
     n = len(vista)
     ancho = len("y" + str(n)) + 1
@@ -337,10 +361,13 @@ def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
 
 
 def dibujar_cubo(cubo, mostrar_naves=True):
-    """Objetivo: armar el dibujo de todas las capas de z, una debajo de otra.
+    """
+    Objetivo: armar el dibujo de todas las capas de z, una debajo de otra.
     Parametros: cubo y mostrar_naves (bool).
     Salida: cadena lista para imprimir, con las referencias al final.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    
+    """
     bloques = []
     for z in range(1, len(cubo) + 1):
         bloques.append(dibujar_capa(cubo, z, mostrar_naves, False))

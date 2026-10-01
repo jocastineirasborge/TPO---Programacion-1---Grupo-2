@@ -9,14 +9,14 @@ from typing import List, Tuple
 ESTADO_AGUA = "~"
 
 # Catálogo de naves: Lista de tuplas (letra, nombre, celdas_ocupadas, cantidad_disponible)
-CATALOGO_NAVES = [
-    ("F", "Fragata", 2, 3),
-    ("D", "Destructor", 3, 2),
-    ("S", "Submarino", 3, 2),
-    ("C", "Crucero", 4, 1),
-    ("P", "Portaaviones", 5, 1),
-    ("E", "Estación orbital", 8, 1)
-]
+CATALOGO_NAVES = {
+    "F": {"nombre": "Fragata", "celdas": 3, "cantidad": 2},
+    "D": {"nombre": "Destructor", "celdas": 2, "cantidad": 2},
+    "S": {"nombre": "Submarino", "celdas": 2, "cantidad": 2},
+    "C": {"nombre": "Crucero", "celdas": 4, "cantidad": 1},
+    "P": {"nombre": "Portaaviones", "celdas": 5, "cantidad": 1},
+    "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
+    }
 
 # Lista global de la flota ubicada en la partida
 FLOTA_UBICADA: List[Tuple[str, List[Tuple[int, int, int]], List[Tuple[int, int, int]]]] = []
