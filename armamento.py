@@ -122,9 +122,11 @@ def obtener_celdas_afectadas(arma, objetivo, n):
         list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
     """
 
-    for letra, funcion_disparo in DESPACHO_ARMAS:
-        if letra == arma:
-            return funcion_disparo(objetivo, n)
+    if arma in CATALOGO_ARMAS:
+        funcion_elegida = DESPACHO_ARMAS[arma]
 
+        celdas = funcion_elegida(objetivo, n)
+
+        return celdas
     return []
 

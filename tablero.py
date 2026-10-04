@@ -128,11 +128,13 @@ def texto_a_punto(texto, cubo):
 
 
 def texto_a_tramo(texto, cubo):
-    """Objetivo: convertir un tramo tipeado ("3,4,2-3,4,7") en dos puntos.
+    """
+    Objetivo: convertir un tramo tipeado ("3,4,2-3,4,7") en dos puntos.
     Parametros: texto (str) con dos puntos unidos por un guion, y el cubo.
     Salida: tupla (desde, hasta) con dos puntos validos, o None.
     No controla que el tramo sea recto: esa regla pertenece a flota.py.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if type(texto) != str:
         return None
     partes = texto.split("-")
@@ -146,10 +148,12 @@ def texto_a_tramo(texto, cubo):
 
 
 def punto_a_texto(punto):
-    """Objetivo: escribir un punto en el formato del juego.
+    """
+    Objetivo: escribir un punto en el formato del juego.
     Parametros: punto (tupla z, x, y).
     Salida: cadena "z,x,y", por ejemplo "6,3,1".
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     partes = []
     for i in range(0, len(punto)):
         partes.append(str(punto[i]))
@@ -157,10 +161,12 @@ def punto_a_texto(punto):
 
 
 def leer_celda(cubo, punto):
-    """Objetivo: obtener el estado de una celda.
+    """
+    Objetivo: obtener el estado de una celda.
     Parametros: cubo y punto (tupla z, x, y).
     Salida: el estado de la celda, o None si el punto no es valido.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if not es_punto_valido(cubo, punto):
         return None
     z, x, y = punto
@@ -168,10 +174,12 @@ def leer_celda(cubo, punto):
 
 
 def escribir_celda(cubo, punto, estado):
-    """Objetivo: cambiar el estado de una celda (modifica el cubo recibido).
+    """
+    Objetivo: cambiar el estado de una celda (modifica el cubo recibido).
     Parametros: cubo, punto (tupla z, x, y) y estado (uno de ESTADOS).
     Salida: True si se escribio; False si el punto o el estado no son validos.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if not es_punto_valido(cubo, punto):
         return False
     if estado not in ESTADOS:
@@ -347,14 +355,17 @@ def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
     lineas = []
     lineas.append(f"========= CAPA z = {z} =========")
     encabezado = completar("", ancho)
+
     for x in range(0, n):
         encabezado = encabezado + completar("x" + str(x + 1), ancho)
     lineas.append(encabezado.rstrip())
+
     for y in range(0, n):
         fila = completar("y" + str(y + 1), ancho)
         for x in range(0, n):
             fila = fila + completar(simbolo_de(vista[y][x], mostrar_naves), ancho)
         lineas.append(fila.rstrip())
+
     if con_referencias:
         lineas.append(texto_referencias(mostrar_naves))
     return "\n".join(lineas)
@@ -366,7 +377,6 @@ def dibujar_cubo(cubo, mostrar_naves=True):
     Parametros: cubo y mostrar_naves (bool).
     Salida: cadena lista para imprimir, con las referencias al final.
     Excepciones: ninguna.
-    
     """
     bloques = []
     for z in range(1, len(cubo) + 1):
