@@ -3,7 +3,10 @@ Módulo armamento.py
 Administra el catálogo de armas, la munición disponible y las celdas afectadas por cada disparo. 
 """
 
-# Catálogo de armas: Diccionario de diccionarios que contienen la información necesaria{letra: {nombre, municion, descripcion}}
+# ---------------------------------------------
+# Catálogo de armas
+# ---------------------------------------------
+
 CATALOGO_ARMAS = {
     "T": {
         "nombre": "Torpedo",
@@ -42,6 +45,7 @@ CATALOGO_ARMAS = {
     }
 }
 
+
 def obtener_catalogo_armas():
     """
     Objetivo: Devolver la lista de catálogo de armas disponible.
@@ -50,6 +54,10 @@ def obtener_catalogo_armas():
     """
     
     return CATALOGO_ARMAS
+
+# ----------------------------------
+# Funciones de efecto de cada arma
+# ----------------------------------
 
 def efecto_torpedo(objetivo, n):
     """
@@ -66,11 +74,13 @@ def efecto_torpedo(objetivo, n):
 
     return []
 
+
 def efecto_misil_de_racimo(objetivo, n):
     """
     Para la entrega 2.
     """
     pass
+
 
 def efecto_carga(objetivo, n):
     """
@@ -78,11 +88,13 @@ def efecto_carga(objetivo, n):
     """
     pass
 
+
 def efecto_barrido(objetivo, n):
     """
     Para la entrega 2.
     """
     pass
+
 
 def efecto_sonar(objetivo, n):
     """
@@ -90,17 +102,24 @@ def efecto_sonar(objetivo, n):
     """
     pass
 
+
 def efecto_onda(objetivo, n):
     """
     Para la entrega 3.
     """
     pass
 
+
 def efecto_torpedo_guiado(objetivo, n):
     """
     Para la entrega 3.
     """
     pass
+
+
+# -----------------------------------------------------------------------------------
+# Diccionario de despacho de armas, ubicado una vez definida cada función de efecto
+# -----------------------------------------------------------------------------------
 
 DESPACHO_ARMAS = {
     "T": efecto_torpedo,
@@ -111,6 +130,11 @@ DESPACHO_ARMAS = {
     "O": efecto_onda,
     "G": efecto_torpedo_guiado
 }
+
+
+# ----------------------------------
+# Funcion principal de ejecución
+# ----------------------------------
 
 def obtener_celdas_afectadas(arma, objetivo, n):
     """
@@ -129,5 +153,6 @@ def obtener_celdas_afectadas(arma, objetivo, n):
         celdas = funcion_elegida(objetivo, n)
 
         return celdas
+    
     return []
 

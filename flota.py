@@ -6,7 +6,10 @@ Administra el catálogo de naves, reglas de ubicación y la colocación manual y
 import random
 import tablero
 
-# Catálogo de naves: Diccionario de diccionarios
+# ------------------------------------
+# Catálogo y estructuras globales
+# ------------------------------------
+
 CATALOGO_NAVES = {
     "F": {"nombre": "Fragata", "celdas": 2, "cantidad": 3},
     "D": {"nombre": "Destructor", "celdas": 3, "cantidad": 2},
@@ -16,12 +19,21 @@ CATALOGO_NAVES = {
     "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
     }
 
-# Lista global de la flota ubicada en la partida
+
 FLOTA_UBICADA = []
+
+
+# -------------------------------------
+# Funciones de consulta y auxiliares
+# -------------------------------------
 
 def inicializar_flota():
     """
     Objetivo: Vaciar la lista de flota para una partida nueva.
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        None.
     """
     FLOTA_UBICADA.clear()
     
@@ -81,6 +93,10 @@ def obtener_puntos_tramo(desde, hasta):
 
     return puntos
 
+
+# -----------------------------------------
+# Reglas de ubicación y distancia segura
+# -----------------------------------------
 
 def validar_reglas_ubicacion(nave_letra, puntos, n):
     """
@@ -147,6 +163,10 @@ def hay_distancia_segura(cubo, puntos, n):
                                 return False
     return True
 
+
+# -----------------------------------------------
+# Colocación manual y automática de las naves
+# -----------------------------------------------
 
 def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
     """

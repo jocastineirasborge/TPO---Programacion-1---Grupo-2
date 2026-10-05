@@ -17,6 +17,7 @@ import re
 # ------------------------------------------------------------------
 # Estados de celda: cada estado tiene nombre propio
 # ------------------------------------------------------------------
+
 SIN_EXPLORAR = 0
 NAVE_OCULTA = 1
 AGUA_MARCADA = 2
@@ -47,6 +48,7 @@ DESCRIPCIONES = {
 # ------------------------------------------------------------------
 # Tamaño del cubo
 # ------------------------------------------------------------------
+
 N_POR_DEFECTO = 8
 N_MINIMO = 5    # el portaaviones ocupa 5 celdas en linea recta
 N_MAXIMO = 20   # limite para que el dibujo por consola siga siendo legible
@@ -57,6 +59,7 @@ PATRON_PUNTO = r"^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$"
 # ------------------------------------------------------------------
 # Cubo y validacion de puntos
 # ------------------------------------------------------------------
+
 def crear_cubo(n = N_POR_DEFECTO):
     """
     Objetivo: crear un cubo de n x n x n con todas las celdas sin explorar.
@@ -80,10 +83,12 @@ def crear_cubo(n = N_POR_DEFECTO):
 
 
 def tamanio_cubo(cubo):
-    """Objetivo: informar el tamaño N del cubo.
+    """
+    Objetivo: informar el tamaño N del cubo.
     Parametros: cubo.
     Salida: N (int).
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     return len(cubo)
 
 
@@ -196,6 +201,7 @@ def escribir_celda(cubo, punto, estado):
 # ------------------------------------------------------------------
 # Operaciones de matrices
 # ------------------------------------------------------------------
+
 def obtener_capa(cubo, z):
     """
     Objetivo: obtener una copia de la capa z del cubo.
@@ -301,6 +307,7 @@ def vista_rival(cubo):
 # ------------------------------------------------------------------
 # Dibujo
 # ------------------------------------------------------------------
+
 def completar(texto, ancho):
     """
     Objetivo: agregar espacios a la derecha hasta llegar a un ancho.
