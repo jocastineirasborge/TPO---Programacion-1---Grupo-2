@@ -75,6 +75,7 @@ def crear_cubo(n = N_POR_DEFECTO):
                 fila.append(SIN_EXPLORAR)
             capa.append(fila)  # cada fila es una lista NUEVA: no hay aliasing
         cubo.append(capa)
+
     return cubo
 
 
@@ -91,16 +92,19 @@ def es_punto_valido(cubo, punto):
     Objetivo: verificar que un punto exista dentro del cubo.
     Parámetros: cubo y punto (tupla z, x, y).
     Salida: True si es una tupla de 3 enteros entre 1 y N; False si no.
-    Excepciones: ninguna."""
+    Excepciones: ninguna.
+    """
     if type(punto) != tuple or len(punto) != 3:
         return False
     n = len(cubo)
+    
     for i in range(0, len(punto)):
         valor = punto[i]
         if type(valor) != int:
             return False
         if valor < 1 or valor > n:
             return False
+        
     return True
 
 

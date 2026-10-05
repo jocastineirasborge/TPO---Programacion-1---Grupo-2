@@ -8,9 +8,9 @@ import tablero
 
 # Catálogo de naves: Diccionario de diccionarios
 CATALOGO_NAVES = {
-    "F": {"nombre": "Fragata", "celdas": 3, "cantidad": 2},
-    "D": {"nombre": "Destructor", "celdas": 2, "cantidad": 2},
-    "S": {"nombre": "Submarino", "celdas": 2, "cantidad": 2},
+    "F": {"nombre": "Fragata", "celdas": 2, "cantidad": 3},
+    "D": {"nombre": "Destructor", "celdas": 3, "cantidad": 2},
+    "S": {"nombre": "Submarino", "celdas": 3, "cantidad": 2},
     "C": {"nombre": "Crucero", "celdas": 4, "cantidad": 1},
     "P": {"nombre": "Portaaviones", "celdas": 5, "cantidad": 1},
     "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
@@ -44,20 +44,20 @@ def obtener_puntos_tramo(desde, hasta):
     Devuelve:
         list: Lista de tuplas con los puntos intermedios, o [] si cambia en más de un eje.
     """
-    z1, y1, x1 = desde
-    z2, y2, x2 = hasta
+    z1, x1, y1 = desde
+    z2, x2, y2 = hasta
 
     dz = abs(z2 - z1)
-    dy = abs(y2 - y1)
     dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
 
     # Contar en cuántos ejes hay movimiento
     ejes_cambiados = 0
     if dz > 0:
         ejes_cambiados += 1
-    if dy > 0:
-        ejes_cambiados += 1
     if dx > 0:
+        ejes_cambiados += 1
+    if dy > 0:
         ejes_cambiados += 1
 
     if ejes_cambiados > 1:
@@ -67,15 +67,15 @@ def obtener_puntos_tramo(desde, hasta):
     if dz > 0:
         paso = 1 if z2 >= z1 else -1
         for z in range(z1, z2 + paso, paso):
-            puntos.append((z, y1, x1))
-    elif dy > 0:
-        paso = 1 if y2 >= y1 else -1
-        for y in range(y1, y2 + paso, paso):
-            puntos.append((z1, y, x1))
+            puntos.append((z, x1, y1))
     elif dx > 0:
         paso = 1 if x2 >= x1 else -1
         for x in range(x1, x2 + paso, paso):
-            puntos.append((z1, y1, x))
+            puntos.append((z1, x, y1))
+    elif dy > 0:
+        paso = 1 if y2 >= y1 else -1
+        for y in range(y1, y2 + paso, paso):
+            puntos.append((z1, x1, y))
     else:
         puntos.append(desde)
 
@@ -95,32 +95,32 @@ def validar_reglas_ubicacion(nave_letra, puntos, n):
     if not puntos:
         return False
 
-    for p in puntos:
-        if not tablero.es_punto_valido(p, n):
+    for z, x, y in puntos:
+        if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
             return False
 
     # Submarino: Solo en la mitad inferior de z (z <= n // 2)
     if nave_letra == "S":
-        for z, y, x in puntos:
+        for z, x, y in puntos:
             if z > (n // 2):
                 return False
 
     # Crucero: No puede ocupar z=1 ni z=n
     elif nave_letra == "C":
-        for z, y, x in puntos:
+        for z, x, y in puntos:
             if z == 1 or z == n:
                 return False
 
     # Portaaviones: Solo en la mitad superior de z (z > n // 2)
     elif nave_letra == "P":
-        for z, y, x in puntos:
+        for z, x, y in puntos:
             if z <= (n // 2):
                 return False
 
     # Estación orbital: No puede tocar ninguna cara exterior del cubo
     elif nave_letra == "E":
-        for z, y, x in puntos:
-            if z == 1 or z == n or y == 1 or y == n or x == 1 or x == n:
+        for z, x, y in puntos:
+            if z == 1 or z == n or x == 1 or x == n or y == 1 or y == n:
                 return False
 
     return True
@@ -136,14 +136,14 @@ def hay_distancia_segura(cubo, puntos, n):
     Devuelve:
         bool: True si hay distancia segura, False si hay una nave colindante.
     """
-    for z, y, x in puntos:
+    for z, x, y in puntos:
         for dz in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    nz, ny, nx = z + dz, y + dy, x + dx
-                    if 1 <= nz <= n and 1 <= ny <= n and 1 <= nx <= n:
-                        if tablero.leer_celda(cubo, (nz, ny, nx)) == tablero.NAVE_OCULTA:
-                            if (nz, ny, nx) not in puntos:
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    nz, nx, ny = z + dz, x + dx, y + dy
+                    if 1 <= nz <= n and 1 <= nx <= n and 1 <= ny <= n:
+                        if tablero.leer_celda(cubo, (nz, nx, ny)) == tablero.NAVE_OCULTA:
+                            if (nz, nx, ny) not in puntos:
                                 return False
     return True
 
@@ -169,13 +169,13 @@ def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
     celdas_requeridas = CATALOGO_NAVES[nave]["celdas"]
 
     if nave == "E":
-        z1, y1, x1 = punto_desde
-        z2, y2, x2 = punto_hasta
+        z1, x1, y1 = punto_desde
+        z2, x2, y2 = punto_hasta
         puntos = []
         for z in range(min(z1, z2), max(z1, z2) + 1):
-            for y in range(min(y1, y2), max(y1, y2) + 1):
-                for x in range(min(x1, x2), max(x1, x2) + 1):
-                    puntos.append((z, y, x))
+            for x in range(min(x1, x2), max(x1, x2) + 1):
+                for y in range(min(y1, y2), max(y1, y2) + 1):
+                    puntos.append((z, x, y))
 
         if len(puntos) != 8:
             raise ValueError("La estación orbital debe formar un bloque de 2x2x2.")
@@ -220,7 +220,7 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
         random.seed(semilla)
 
     flota = []
-    for letra, datos in CATALOGO_NAVES.items():
+    for letra, datos in catalogo.items():
         celdas = datos["celdas"]
         cantidad = datos["cantidad"]
 

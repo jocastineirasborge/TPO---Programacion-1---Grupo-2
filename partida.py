@@ -170,7 +170,7 @@ def ubicacion_manual(jugador, n=8):
     """
     cubo = jugador["cubo"]
     flota_jugador = jugador["flota"]
-    pendientes = ["F", "F", "D", "D", "S", "S", "C", "P", "E"]
+    pendientes = ["F", "F", "F", "D", "D", "S", "S", "C", "P", "E"]
 
     while len(pendientes) > 0:
         print(f"\nPendientes: {pendientes}")
@@ -181,19 +181,19 @@ def ubicacion_manual(jugador, n=8):
             continue
 
         if nave == "E":
-            punto = input("Esquina de la estación: ").strip()
+            texto = input("Tramo de la estación orbital: ").strip()
 
         else:
-            punto = input("Tramo de la estación orbital(ej. 2,2,2-3,3,3): ").strip()
+            texto = input("Tramo Desde-Hasta: ").strip()
 
-        tramo = tablero.texto_a_tramo(punto, cubo)
+        tramo = tablero.texto_a_tramo(texto, cubo)
         if tramo is None:
             print("Formato de coordenada o rango inválido.")
             continue
 
         desde, hasta = tramo
         try:
-            flota.ubicar_nave(cubo, flota, nave, desde, hasta, n)
+            flota.ubicar_nave(cubo, flota_jugador, nave, desde, hasta, n)
             pendientes.remove(nave)
             print(f"Nave {nave} ubicada exitosamente.")
         except ValueError as ve:

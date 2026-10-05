@@ -55,7 +55,7 @@ def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
-        - Objetivo(tuple): Coordenada en (z, y, x) del disparo.
+        - Objetivo(tuple): Coordenada en (z, x, y) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
@@ -100,6 +100,7 @@ def efecto_torpedo_guiado(objetivo, n):
     """
     Para la entrega 3.
     """
+    pass
 
 DESPACHO_ARMAS = {
     "T": efecto_torpedo,
