@@ -138,6 +138,9 @@ def ejecutar_turno(estado, jugada):
     n = estado["n"]
 
     arma = jugada.get("arma", "T")
+    if not arma:
+        arma = "T"
+    
     texto_objetivo = jugada.get("objetivo")
 
     punto_objetivo = tablero.texto_a_punto(texto_objetivo, cubo_rival)
@@ -398,8 +401,23 @@ def partida_1v1(estado):
         opcion = input("Opción: ").strip()
 
         if opcion == "1":
-            arma = input("Arma (T): ").strip().upper()
-            objetivo = input("Objetivo: ").strip()
+            catalogo = obtener_catalogo_armas()
+            while True:
+                arma = input("Arma (T): ").strip().upper()
+                if not arma:
+                    arma = "T"
+                if arma in catalogo:
+                    break
+                print("Arma no válida.")
+
+            cubo_rival = estado["jugadores"][1 - jugador]["cubo"]
+            while True:
+                objetivo = input("Objetivo: ").strip()
+                punto = tablero.texto_a_punto(objetivo, cubo_rival)
+                if punto is not None:
+                    break
+                print("Coordenada inválida, inténtelo de nuevo.")
+
             try:
                 ejecutar_turno(estado, {"arma": arma, "objetivo": objetivo})
                 print("Disparo realizado.")
@@ -442,8 +460,23 @@ def partida_vs_maquina(estado):
             opcion = input("Opción: ")
 
             if opcion == "1":
-                arma = input("Arma (T): ").upper()
-                objetivo = input("Objetivo: ")
+                catalogo = obtener_catalogo_armas()
+                while True:
+                    arma = input("Arma (T): ").strip().upper()
+                    if not arma:
+                        arma = "T"
+                    if arma in catalogo:
+                        break
+                    print("Arma no válida.")
+
+                cubo_rival = estado["jugadores"][1]["cubo"]
+                while True:
+                    objetivo = input("Objetivo: ").strip()
+                    punto = tablero.texto_a_punto(objetivo, cubo_rival)
+                    if punto is not None:
+                        break
+                    print("Coordenada inválida, inténtelo de nuevo.")
+
                 try:
                     ejecutar_turno(estado,{"arma": arma,"objetivo": objetivo})
                     print("Disparo realizado.")
