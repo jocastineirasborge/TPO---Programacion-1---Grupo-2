@@ -1,4 +1,11 @@
-"""Módulo para la partida"""
+"""
+Módulo partida.py
+
+Integrador principal del juego 'Operación Cubo'.
+Maneja la creación del estado de las partidas, el bucle de
+turnos, la interfaz de consola, la validación de entrada
+y los menús.
+"""
 import random
 import tablero
 import flota
@@ -6,26 +13,73 @@ from radar import busqueda_lineal_nave
 from armamento import obtener_celdas_afectadas, obtener_catalogo_armas
 import registro
 
-# EXCEPCIÓN PROPIA
+# --------------------------------------------
+# Excepciones y constantes
+# --------------------------------------------
+
 class ErrorPartida(Exception):
     pass
 
 TAMANO_CUBO = 8
 
-# UBICACIÓN AUTOMÁTICA
+# --------------------------------------------
+# Funciones auxiliares
+# --------------------------------------------
+
+def crear_jugador(n):
+    """
+    Objetivo: Crear y estructurar diccionario con el estado inicial del jugador.
+    Parámetros:
+        n(int): Tamaño de la dimensión del cubo(N x N x N).
+    Devuelve:
+        dict: Diccionario con la estructura básica del jugador.
+    """
+    return {"cubo": tablero.crear_cubo(n),"flota": [],"disparos": []}
+
+
+def formatear_pendientes(pendientes):
+    """
+    Objetivo: Convertir la lista de naves pendientes de ubicación a una cadena
+    de texto formateada de este tipo.
+    (ej. 'F x3 D x2 S x2 C x1 P x1 E x1')
+    Parámetros:
+        - pendientes(list): Lista con las letras identificadoras de cada nave disponible.
+    Devuelve:
+        str: Cadena de texto formada con los tipos de naves y cantidades disponibles.
+    """
+    orden_naves = ["F", "D", "S", "C", "P", "E"]
+    partes = []
+    for nave in orden_naves:
+        cant = pendientes.count(nave)
+        if cant > 0:
+            partes.append(f"{nave} x{cant}")
+
+    return "   ".join(partes)
+
 
 def colocar_flota_automatica(jugador, n=8):
     """
-    Delega la colocación aleatoria a flota.py y actualiza la flota del jugador.
+    Objetivo: Delega la colocación aleatoria a flota.py y actualiza la flota del jugador.
+    Parámetros:
+        - jugador(dict): Diccionario del jugador con la clave 'cubo'.
+        - n(int): Tamaño de la dimensión del cubo(valor por defecto 8).
+    Devuelve:
+        None: Modifica de forma directa el diccionario.
     """
     jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], n=n)
 
-# JUGADOR
-def crear_jugador(n):
-    return {"cubo": tablero.crear_cubo(n),"flota": [],"disparos": []}
+# ---------------------------------------------------
+# Funciones públicas obligatorias - Inicialización
+# ---------------------------------------------------
 
-# FUNCIONES PÚBLICAS OBLIGATORIAS
 def nueva_partida_1v1(configuracion):
+    """
+    Objetivo: Inicializar la estructura de datos que representa una nueva partida en modo 1v1.
+    Parámetros:
+        - configuración(dict): Diccionario de configuración que contiene la clave 'n'.
+    Devuelve:
+        dict:  Estado inicial de la partida.
+    """
     n = configuracion.get("n", TAMANO_CUBO)
 
     return {
@@ -37,7 +91,16 @@ def nueva_partida_1v1(configuracion):
         "ganador": None
         }
 
+
 def nueva_partida_vs_maquina(configuracion, dificultad):
+    """
+    Objetivo: Inicializar la estructura de datos que representa una nueva partida en modo 'vs máquina'.
+    Parámetros:
+        - configuración(dict): Diccionario de configuración que contiene la clave 'n'.
+        - dificultad(str): Nivel de dificultad asignado al comportamiento de la computadora.
+    Devuelve:
+        dict: Estado inicial de la partida en modo 'vs máquina'.
+    """
     n = configuracion.get("n", TAMANO_CUBO)
 
     return {
@@ -50,17 +113,19 @@ def nueva_partida_vs_maquina(configuracion, dificultad):
         "ganador": None
         }
 
-def buscar_nave(flota, celda):
-    for nave in flota:
-        if celda in nave["celdas"]:
-            return nave
-    return None
+# ----------------------------------------------------
+# Funciones públicas obligatorias - Lógica de juego
+# ----------------------------------------------------
 
 def ejecutar_turno(estado, jugada):
     """
-    Objetivo: 
-    Parámetros: 
+    Objetivo: Procesa la jugada de un turno, calculando impacto del arma sobre el cubo,
+    actualizando estado de las naves, y registrando el evento en el historial.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+        - jugada(dict): Diccionario con las claves 'arma' y 'objetivo'.
     Devuelve:
+        dict: Diccionario del estado de la partida actualizado.
     """
     if estado["terminada"]:
         raise ValueError("La partida ya terminó.")
@@ -114,8 +179,16 @@ def ejecutar_turno(estado, jugada):
 
     return estado
 
-def turno_maquina(estado):
 
+def turno_maquina(estado):
+    """
+    Objetivo: Seleccionar una coordenada de disparo de manera aleatoria.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        function: Devuelve la función 'ejecutar_turno' con los parámetros de estado y la jugada
+        actualizados para realizar la jugada.
+    """
     if estado["turno"] != 1:
         raise ErrorPartida("No es el turno de la máquina.")
     
@@ -141,7 +214,17 @@ def turno_maquina(estado):
 
     return ejecutar_turno(estado, jugada)
 
+
 def hay_ganador(estado):
+    """
+    Objetivo: Verificar si alguno de los jugadores logró hundir la totalidad
+    de la flota rival.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        int o None: El número del jugador ganador si la partida terminó, 
+        o None si la flota del oponente aún conserva celdas.
+    """
     for jugador in range(2):
         rival = 1 - jugador
         flota_rival = estado["jugadores"][rival]["flota"]
@@ -163,17 +246,29 @@ def hay_ganador(estado):
         
     return None
       
-# SUBMENÚ DE UBICACIÓN
+# ----------------------------------
+# Submenús y preparación de flota
+# ----------------------------------
+
 def ubicacion_manual(jugador, n=8):
     """
-    Submenú interactivo para que el usuario ubique sus naves por consola.
+    Objetivo: Gestiona la interfaz por consola para que el jugador ubique manualmente
+    todas las naves de la flota.
+    Parámetros:
+        - jugador(dict): Diccionario del jugador con la matriz 'cubo' y
+        la lista 'flota'.
+        - n(int): Dimensión del arista del cubo(por defecto 8).
+    Devuelve:
+        None: Modifica de forma directa las celdas del cubo y asigna
+        las naves del jugador.
     """
     cubo = jugador["cubo"]
     flota_jugador = jugador["flota"]
     pendientes = ["F", "F", "F", "D", "D", "S", "S", "C", "P", "E"]
 
     while len(pendientes) > 0:
-        print(f"\nPendientes: {pendientes}")
+        texto_pendientes = formatear_pendientes(pendientes)
+        print(f"\nPendientes: {texto_pendientes}")
         nave = input("Nave (F/D/S/C/P/E): ").strip().upper()
 
         if nave not in pendientes:
@@ -199,10 +294,21 @@ def ubicacion_manual(jugador, n=8):
         except ValueError as ve:
             print(f"La nave no se puede ubicar ahi: {ve}")
 
+
 def submenú_ubicacion(jugador, n=8):
+    """
+    Objetivo: Desplegar un menú interactivo correspondiente a
+    la selección de ubicación manual o automática de la flota del jugador.
+    Parámetros:
+        - jugador(dict): Diccionario que representa la estructura de datos
+        del jugador.
+        - n(int): Tamaño del arista del cubo(por defecto 8).
+    Devuelve:
+        None: Invoca a las funciones de ubicación(manual o automática) que
+        modifican de forma directa el cubo y la flota del jugador.
+    """
     while True:
-        print()
-        print("1 - Ubicación manual")
+        print("\n1 - Ubicación manual")
         print("2 - Ubicación automática")
         opcion = input("Opción: ")
 
@@ -218,9 +324,18 @@ def submenú_ubicacion(jugador, n=8):
         else:
             print("Opción inválida")
 
-# PREPARACIÓN DE PARTIDAS
 
 def preparar_1v1():
+    """
+    Objetivo: Inicializa el historial de registro, crea el estado base
+    de una partida en modo 1v1 y coordina la fase previa de ubicación de nave
+    para ambos jugadores.
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        dict: Diccionario con el estado de una partida 1v1 configurada y
+        lista para comenzar.
+    """
     registro.inicializar_registro()
     estado = nueva_partida_1v1({"n": TAMANO_CUBO})
 
@@ -232,12 +347,24 @@ def preparar_1v1():
 
     return estado
 
+
 def preparar_vs_maquina():
+    """
+    Objetivo: Inicializa el registro, crea el estado base de una
+    partida en modo 'vs máquina' y coordinar la fase previa de ubicación
+    de naves(configurable para el jugador humano y automático para la máquina).
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        dict: Diccionario con el estado de una partida 'vs máquina' configurada
+        y lista para comenzar.
+    """
+    registro.inicializar_registro()
     estado = nueva_partida_vs_maquina({"n": TAMANO_CUBO},"normal")
     n = estado["n"]
 
     print("\n--- Flota del Jugador ---")
-    submenú_ubicacion(estado["jugadores"][0])
+    submenú_ubicacion(estado["jugadores"][0], n)
 
     print("\n--- Flota de la máquina ---")
     colocar_flota_automatica(estado["jugadores"][1], n)
@@ -245,8 +372,20 @@ def preparar_vs_maquina():
 
     return estado
 
-# PARTIDA 1 VS 1
+# -------------------------------------
+# Bucle principal de partidas y menú
+# -------------------------------------
+
 def partida_1v1(estado):
+    """
+    Objetivo: Gestiona el bucle principal de juego en modo 1v1.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        None: Se ejecuta de manera interactiva por consola hasta
+        que se determine un ganador o el usuario decida salir al
+        menú principal.
+    """
     while not estado["terminada"]:
         jugador = estado["turno"]
         print("----------------------------")
@@ -280,8 +419,18 @@ def partida_1v1(estado):
         else:
             print("Opción inválida")
 
-# PARTIDA CONTRA MÁQUINA
+
 def partida_vs_maquina(estado):
+    """
+    Objetivo: Gestiona el bucle principal de juego en modo
+    'vs máquina'.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        None: Se ejecuta de manera interactiva por consola hasta
+        que se determine un ganador o el usuario decida salir
+        al menú principal.
+    """
     while not estado["terminada"]:
         if estado["turno"] == 0:
             print("----------------------------")
@@ -324,9 +473,18 @@ def partida_vs_maquina(estado):
             else:
                 print("Ganó la máquina")
 
-# MENÚ PRINCIPAL
-def menu_principal():
 
+def menu_principal():
+    """
+    Objetivo: Desplega el menú principal del juego 'Operación Cubo'
+    y dirige el flujo de ejecución del programa según la opción
+    seleccionada por el jugador.
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        None: Ejecuta un bucle interactivo por consola hasta que el
+        usuario decida salir.
+    """
     while True:
         print("==============================")
         print("       OPERACION CUBO")
@@ -363,4 +521,6 @@ def menu_principal():
         else:
             print("Opción inválida")
 
+
+#Ejecución de programa principal
 menu_principal()
