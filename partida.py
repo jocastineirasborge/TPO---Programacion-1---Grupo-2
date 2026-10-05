@@ -422,7 +422,7 @@ def partida_1v1(estado):
                 ejecutar_turno(estado, {"arma": arma, "objetivo": objetivo})
                 print("Disparo realizado.")
                 if estado["terminada"]:
-                    print(f"\n¡Ganó el Jugador{estado["ganador"] + 1}!")
+                    print(f"\n¡Ganó el Jugador{estado['ganador'] + 1}!")
             except ErrorPartida as error:
                 print("Error:", error)
 
