@@ -1,80 +1,69 @@
 """
-Módulo flota.py - Operación Cubo
+Módulo flota.py
 Administra el catálogo de naves, reglas de ubicación y la colocación manual y automática dentro del cubo.
 """
 
 import random
+import tablero
 
-# Catálogo oficial de naves: (letra, nombre, celdas_ocupadas, cantidad_disponible)
-CATALOGO_NAVES = [
-    ("F", "Fragata", 2, 3),
-    ("D", "Destructor", 3, 2),
-    ("S", "Submarino", 3, 2),
-    ("C", "Crucero", 4, 1),
-    ("P", "Portaaviones", 5, 1),
-    ("E", "Estación orbital", 8, 1)
-]
+# ------------------------------------
+# Catálogo y estructuras globales
+# ------------------------------------
 
+CATALOGO_NAVES = {
+    "F": {"nombre": "Fragata", "celdas": 2, "cantidad": 3},
+    "D": {"nombre": "Destructor", "celdas": 3, "cantidad": 2},
+    "S": {"nombre": "Submarino", "celdas": 3, "cantidad": 2},
+    "C": {"nombre": "Crucero", "celdas": 4, "cantidad": 1},
+    "P": {"nombre": "Portaaviones", "celdas": 5, "cantidad": 1},
+    "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
+    }
+
+
+FLOTA_UBICADA = []
+
+
+# -------------------------------------
+# Funciones de consulta y auxiliares
+# -------------------------------------
 
 def inicializar_flota():
     """
-    Objetivo: Crear y devolver una lista vacía para la flota de un jugador.
+    Objetivo: Vaciar la lista de flota para una partida nueva.
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        None.
     """
-    return []
-
+    FLOTA_UBICADA.clear()
+    
 
 def obtener_catalogo_naves():
     """
     Objetivo: Devolver la lista del catálogo de naves disponible.
+    Devuelve:
+        list: Lista de tuplas con el catálogo de naves.
     """
     return CATALOGO_NAVES
 
 
-def obtener_datos_nave(letra):
+def obtener_puntos_tramo(desde, hasta):
     """
-    Objetivo: Buscar la información del catálogo para una nave según su letra.
-    """
-    for nave in CATALOGO_NAVES:
-        if nave[0] == letra:
-            return nave
-    return None
-
-
-def obtener_puntos(nave_letra, desde, hasta):
-    """
-    Objetivo: Generar la lista de puntos ocupados según el tipo de nave.
-    Parámetros: desde y hasta son tuplas (z, x, y).
+    Objetivo: Generar la lista de puntos entre 'desde' y 'hasta' a lo largo de un solo eje.
+    Parámetros:
+        - desde (tuple): Coordenada inicial (z, y, x).
+        - hasta (tuple): Coordenada final (z, y, x).
+    Devuelve:
+        list: Lista de tuplas con los puntos intermedios, o [] si cambia en más de un eje.
     """
     z1, x1, y1 = desde
     z2, x2, y2 = hasta
 
-    if z2 >= z1:
-        dz = z2 - z1
-    else:
-        dz = z1 - z2
+    dz = abs(z2 - z1)
+    dx = abs(x2 - x1)
+    dy = abs(y2 - y1)
 
-    if x2 >= x1:
-        dx = x2 - x1
-    else:
-        dx = x1 - x2
-
-    if y2 >= y1:
-        dy = y2 - y1
-    else:
-        dy = y1 - y2
-
-    # Caso Estación Orbital (bloque 2x2x2)
-    if nave_letra == "E":
-        if dz != 1 or dx != 1 or dy != 1:
-            return []
-        puntos = []
-        for z in range(min(z1, z2), max(z1, z2) + 1):
-            for x in range(min(x1, x2), max(x1, x2) + 1):
-                for y in range(min(y1, y2), max(y1, y2) + 1):
-                    puntos.append((z, x, y))
-        return puntos
-
-    # Caso Naves en línea recta (solo puede cambiar un eje)
+    # Contar en cuántos ejes hay movimiento
     ejes_cambiados = 0
     if dz > 0:
         ejes_cambiados += 1
@@ -87,18 +76,17 @@ def obtener_puntos(nave_letra, desde, hasta):
         return []
 
     puntos = []
-    paso_z = 1 if z2 >= z1 else -1
-    paso_x = 1 if x2 >= x1 else -1
-    paso_y = 1 if y2 >= y1 else -1
-
     if dz > 0:
-        for z in range(z1, z2 + paso_z, paso_z):
+        paso = 1 if z2 >= z1 else -1
+        for z in range(z1, z2 + paso, paso):
             puntos.append((z, x1, y1))
     elif dx > 0:
-        for x in range(x1, x2 + paso_x, paso_x):
+        paso = 1 if x2 >= x1 else -1
+        for x in range(x1, x2 + paso, paso):
             puntos.append((z1, x, y1))
     elif dy > 0:
-        for y in range(y1, y2 + paso_y, paso_y):
+        paso = 1 if y2 >= y1 else -1
+        for y in range(y1, y2 + paso, paso):
             puntos.append((z1, x1, y))
     else:
         puntos.append(desde)
@@ -106,32 +94,40 @@ def obtener_puntos(nave_letra, desde, hasta):
     return puntos
 
 
-def validar_reglas_ubicacion(nave_letra, puntos, cubo):
+# -----------------------------------------
+# Reglas de ubicación y distancia segura
+# -----------------------------------------
+
+def validar_reglas_ubicacion(nave_letra, puntos, n):
     """
-    Objetivo: Validar que los puntos cumplan con las restricciones geográficas de cada nave.
+    Objetivo: Validar que los puntos cumplan con las restricciones específicas de cada nave.
+    Parámetros:
+        - nave_letra (str): Identificador de la nave.
+        - puntos (list): Lista de coordenadas (z, y, x).
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        bool: True si cumple las reglas, False en caso contrario.
     """
-    if len(puntos) == 0:
+    if not puntos:
         return False
 
-    n = tablero.tamanio_cubo(cubo)
-
-    for p in puntos:
-        if not tablero.es_punto_valido(cubo, p):
+    for z, x, y in puntos:
+        if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
             return False
 
-    # Submarino: Solo en la mitad inferior de z
+    # Submarino: Solo en la mitad inferior de z (z <= n // 2)
     if nave_letra == "S":
         for z, x, y in puntos:
             if z > (n // 2):
                 return False
 
-    # Crucero: No puede ocupar z = 1 ni z = n
+    # Crucero: No puede ocupar z=1 ni z=n
     elif nave_letra == "C":
         for z, x, y in puntos:
             if z == 1 or z == n:
                 return False
 
-    # Portaaviones: Solo en la mitad superior de z
+    # Portaaviones: Solo en la mitad superior de z (z > n // 2)
     elif nave_letra == "P":
         for z, x, y in puntos:
             if z <= (n // 2):
@@ -146,91 +142,117 @@ def validar_reglas_ubicacion(nave_letra, puntos, cubo):
     return True
 
 
-def hay_distancia_segura(cubo, puntos):
+def hay_distancia_segura(cubo, puntos, n):
     """
-    Objetivo: Verificar que se respete al menos una celda libre alrededor de la nave.
+    Objetivo: Verificar que quede al menos una celda libre alrededor en cualquier dirección (incluidas diagonales).
+    Parámetros:
+        - cubo (list): Matriz 3D del tablero.
+        - puntos (list): Lista de coordenadas a evaluar.
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        bool: True si hay distancia segura, False si hay una nave colindante.
     """
     for z, x, y in puntos:
         for dz in (-1, 0, 1):
             for dx in (-1, 0, 1):
                 for dy in (-1, 0, 1):
-                    vecino = (z + dz, x + dx, y + dy)
-                    if tablero.es_punto_valido(cubo, vecino):
-                        if vecino not in puntos:
-                            # Si alguna celda de alrededor tiene una nave, no hay distancia segura
-                            celda = tablero.leer_celda(cubo, vecino)
-                            if celda == tablero.NAVE_OCULTA:
+                    nz, nx, ny = z + dz, x + dx, y + dy
+                    if 1 <= nz <= n and 1 <= nx <= n and 1 <= ny <= n:
+                        if tablero.leer_celda(cubo, (nz, nx, ny)) == tablero.NAVE_OCULTA:
+                            if (nz, nx, ny) not in puntos:
                                 return False
     return True
 
 
-def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta):
+# -----------------------------------------------
+# Colocación manual y automática de las naves
+# -----------------------------------------------
+
+def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
     """
-    Objetivo: Ubicar una nave en el cubo y registrarla en la flota.
-    Parámetros: punto_desde y punto_hasta deben ser tuplas (z, x, y).
-    Devuelve: True si la ubicó con éxito, False si violó alguna regla.
+    Objetivo: Ubicar una nave en el cubo y actualizar la lista de flota.
+    Parámetros:
+        - cubo (list): Matriz 3D del tablero.
+        - flota (list): Lista con el estado de las naves ubicadas.
+        - nave (str): Letra identificadora de la nave.
+        - punto_desde (tuple): Coordenada inicial (z, y, x).
+        - punto_hasta (tuple): Coordenada final (z, y, x).
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        tuple: (cubo, flota) actualizados.
+    Excepciones:
+        Lanza ValueError si alguna regla de ubicación es violada.
     """
-    if punto_desde is None or punto_hasta is None:
-        return False
+    if nave not in CATALOGO_NAVES:
+        raise ValueError(f"Tipo de nave no reconocido: {nave}")
 
-    datos_nave = obtener_datos_nave(nave)
-    if datos_nave is None:
-        return False
+    celdas_requeridas = CATALOGO_NAVES[nave]["celdas"]
 
-    celdas_requeridas = datos_nave[2]
+    if nave == "E":
+        z1, x1, y1 = punto_desde
+        z2, x2, y2 = punto_hasta
+        puntos = []
+        for z in range(min(z1, z2), max(z1, z2) + 1):
+            for x in range(min(x1, x2), max(x1, x2) + 1):
+                for y in range(min(y1, y2), max(y1, y2) + 1):
+                    puntos.append((z, x, y))
 
-    puntos = obtener_puntos(nave, punto_desde, punto_hasta)
+        if len(puntos) != 8:
+            raise ValueError("La estación orbital debe formar un bloque de 2x2x2.")
+    else:
+        puntos = obtener_puntos_tramo(punto_desde, punto_hasta)
+        if len(puntos) != celdas_requeridas:
+            raise ValueError("La cantidad de celdas no coincide con la longitud de la nave.")
 
-    if len(puntos) != celdas_requeridas:
-        return False
+    if not validar_reglas_ubicacion(nave, puntos, n):
+        raise ValueError("La nave no cumple con las reglas de posición o límites del cubo.")
 
-    if not validar_reglas_ubicacion(nave, puntos, cubo):
-        return False
-
-    # Validar que las celdas estén libres (sin naves)
+    # Validar que las celdas estén libres
     for p in puntos:
-        if tablero.leer_celda(cubo, p) == tablero.NAVE_OCULTA:
-            return False
+        if tablero.leer_celda(cubo, p) != tablero.SIN_EXPLORAR:
+            raise ValueError("Hay una celda ocupada por otra nave.")
 
-    if not hay_distancia_segura(cubo, puntos):
-        return False
+    if not hay_distancia_segura(cubo, puntos, n):
+        raise ValueError("No se respeta la distancia de seguridad (1 celda libre alrededor).")
 
-    # Actualizar estado de las celdas en el tablero
     for p in puntos:
         tablero.escribir_celda(cubo, p, tablero.NAVE_OCULTA)
 
-    # Registrar objeto nave dentro de la flota
-    registro_nave = {
-        "letra": nave,
-        "celdas": puntos,
-        "impactos": 0,
-        "hundida": False
-    }
-    flota.append(registro_nave)
-
-    return True
+    flota.append((nave, puntos, []))
+    return cubo, flota
 
 
-def ubicacion_automatica(cubo, catalogo=None, semilla=None):
+def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
     """
     Objetivo: Ubicar de forma automática toda la flota respetando todas las reglas.
+    Parámetros:
+        - cubo (list): Matriz 3D del tablero.
+        - catalogo (list): Lista de tuplas con las naves. Por defecto usa CATALOGO_NAVES.
+        - semilla (int): Semilla aleatoria opcional para pruebas.
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        list: Lista de la flota ubicada.
     """
     if catalogo is None:
         catalogo = CATALOGO_NAVES
 
-    n = tablero.tamanio_cubo(cubo)
-    flota = inicializar_flota()
+    if semilla is not None:
+        random.seed(semilla)
 
-    for letra, nombre, celdas, cantidad in catalogo:
-        for i in range(cantidad):
+    flota = []
+    for letra, datos in catalogo.items():
+        celdas = datos["celdas"]
+        cantidad = datos["cantidad"]
+
+        for i in range(0, cantidad):
             colocada = False
             intentos = 0
-            while not colocada and intentos < 3000:
+            while not colocada and intentos < 2000:
                 intentos += 1
                 if letra == "E":
-                    z = random.randint(2, n - 1)
-                    x = random.randint(2, n - 1)
-                    y = random.randint(2, n - 1)
+                    z = random.randint(2, n - 2)
+                    x = random.randint(2, n - 2)
+                    y = random.randint(2, n - 2)
                     desde = (z, x, y)
                     hasta = (z + 1, x + 1, y + 1)
                 else:
@@ -239,18 +261,17 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None):
                     x = random.randint(1, n)
                     y = random.randint(1, n)
 
+                    desde = (z, x, y)
                     if eje == "z":
-                        desde = (z, x, y)
                         hasta = (z + celdas - 1, x, y)
                     elif eje == "x":
-                        desde = (z, x, y)
                         hasta = (z, x + celdas - 1, y)
                     else:
-                        desde = (z, x, y)
                         hasta = (z, x, y + celdas - 1)
 
-                exito = ubicar_nave(cubo, flota, letra, desde, hasta)
-                if exito:
+                try:
+                    ubicar_nave(cubo, flota, letra, desde, hasta, n)
                     colocada = True
-
+                except ValueError:
+                    pass
     return flota

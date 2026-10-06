@@ -3,18 +3,47 @@ Módulo armamento.py
 Administra el catálogo de armas, la munición disponible y las celdas afectadas por cada disparo. 
 """
 
-# Catálogo de armas: Lista de tuplas que contienen la información necesaria(letra, nombre, munición_inicial)
-CATALOGO_ARMAS = [
-    ("T", "Torpedo", None),
-    ("R", "Misil de racimo", 3),
-    ("C", "Carga de profundidad", 2),
-    ("S", "Sonar", 4),
-    ("L", "Barrido láser", 2),
-    ("O", "Onda expansiva", 1),
-    ("G", "Torpedo guiado", 1)
-    ]
+# ---------------------------------------------
+# Catálogo de armas
+# ---------------------------------------------
 
-#Utilizamos lista de tuplas temporalmente dado que todavía no hemos visto diccionarios.
+CATALOGO_ARMAS = {
+    "T": {
+        "nombre": "Torpedo",
+        "municion": None, # Munición ilimitada
+        "descripcion": "Únicamente la celda apuntada."
+    },
+    "R": {
+        "nombre": "Misil de racimo",
+        "municion": 3,
+        "descripcion": "La celda apuntada y sus seis vecinas ortogonales."
+    },
+    "C": {
+        "nombre": "Carga de profundidad",
+        "municion": 2,
+        "descripcion": "Toda la recta sobre el eje z."
+    },
+    "S": {
+        "nombre": "Sonar",
+        "municion": 4,
+        "descripcion": "Revela un plano entero del cubo."
+    },
+    "L": {
+        "nombre": "Barrido láser",
+        "municion": 2,
+        "descripcion": "Una recta completa sobre el eje x o sobre el eje y."
+    },
+    "O": {
+        "nombre": "Onda expansiva",
+        "municion": 1,
+        "descripcion": "Se propaga en forma recursiva desde el punto, con radio decreciente."
+    },
+    "G": {
+        "nombre": "Torpedo guiado",
+        "municion": 1,
+        "descripcion": "Busca en forma recursiva una celda contigua."
+    }
+}
 
 
 def obtener_catalogo_armas():
@@ -26,49 +55,86 @@ def obtener_catalogo_armas():
     
     return CATALOGO_ARMAS
 
-
-def validacion_de_coordenada(objetivo, n):
-    """
-    Objetivo: Validar si la coordenada (z, y, x) es válida (z, y, x) dentro del cubo.
-    Parámetros:
-        - Objetivo(tuple): Coordenada en (x, y, z) del disparo.
-        - n(int): Tamaño del cubo para validación.
-    Devuelve:
-        bool: True si la coordenada es válida, False en caso contrario.
-    """
-
-    if len(objetivo) != 3:
-        return False
-
-    z, y, x = objetivo
-
-    if type(z) is not int or type(y) is not int or type(x) is not int:
-        return False
-
-    if not (1 <= x <= n and 1 <= y <= n and 1 <= z <= n):
-        return False
-
-    return True
-
+# ----------------------------------
+# Funciones de efecto de cada arma
+# ----------------------------------
 
 def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
-        - Objetivo(tuple): Coordenada en (z, y, x) del disparo.
+        - Objetivo(tuple): Coordenada en (z, x, y) del disparo.
         - n(int): Tamaño del cubo para validación.
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
+    z, x, y = objetivo
+    if 1 <= z <= n and 1 <= x <= n and 1 <= y <= n:
+        return [objetivo]
 
-    if not validacion_de_coordenada(objetivo, n):
-        return False
+    return []
 
-    return [objetivo]
 
-DESPACHO_ARMAS = [
-    ("T", efecto_torpedo)
-]
+def efecto_misil_de_racimo(objetivo, n):
+    """
+    Para la entrega 2.
+    """
+    pass
+
+
+def efecto_carga(objetivo, n):
+    """
+    Para la entrega 2.
+    """
+    pass
+
+
+def efecto_barrido(objetivo, n):
+    """
+    Para la entrega 2.
+    """
+    pass
+
+
+def efecto_sonar(objetivo, n):
+    """
+    Para la entrega 2.
+    """
+    pass
+
+
+def efecto_onda(objetivo, n):
+    """
+    Para la entrega 3.
+    """
+    pass
+
+
+def efecto_torpedo_guiado(objetivo, n):
+    """
+    Para la entrega 3.
+    """
+    pass
+
+
+# -----------------------------------------------------------------------------------
+# Diccionario de despacho de armas, ubicado una vez definida cada función de efecto
+# -----------------------------------------------------------------------------------
+
+DESPACHO_ARMAS = {
+    "T": efecto_torpedo,
+    "R": efecto_misil_de_racimo,
+    "C": efecto_carga,
+    "S": efecto_sonar,
+    "L": efecto_barrido,
+    "O": efecto_onda,
+    "G": efecto_torpedo_guiado
+}
+
+
+# ----------------------------------
+# Funcion principal de ejecución
+# ----------------------------------
 
 def obtener_celdas_afectadas(arma, objetivo, n):
     """
@@ -81,9 +147,12 @@ def obtener_celdas_afectadas(arma, objetivo, n):
         list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
     """
 
-    for letra, funcion_disparo in DESPACHO_ARMAS:
-        if letra == arma:
-            return funcion_disparo(objetivo, n)
+    if arma in CATALOGO_ARMAS:
+        funcion_elegida = DESPACHO_ARMAS[arma]
 
+        celdas = funcion_elegida(objetivo, n)
+
+        return celdas
+    
     return []
 
