@@ -556,8 +556,4 @@ def menu_principal():
 
 
 #Ejecución de programa principal
-<<<<<<< HEAD
 menu_principal()
-=======
-menu_principal()
->>>>>>> 067b722159b9298148bdde26880b456d77a6aa9a
