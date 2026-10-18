@@ -154,18 +154,38 @@ def ejecutar_turno(estado, jugada):
         estado_actual = tablero.leer_celda(cubo_rival, punto)
 
         if estado_actual == tablero.NAVE_OCULTA:
-            hubo_impacto = True
-            tablero.escribir_celda(cubo_rival, punto, tablero.IMPACTO)
-            
-            for nave in flota_rival:
-                letra, puntos, impactos = nave
-                if punto in puntos:
-                    if punto not in impactos:
-                        impactos.append(punto)
-                    if len(impactos) >= len(puntos):
-                        for p in puntos:
+            impacto_valido, letra, estado_impacto = flota.registrar_impacto(flota_rival, punto, arma)
+
+            if estado_impacto == "inmune":
+                continue
+
+            if impacto_valido:
+                hubo_impacto = True
+                tablero.escribir_celda(cubo_rival, punto, tablero.IMPACTO)
+
+            if estado_impacto == "hundida":
+                for nave in flota_rival:
+                    if nave[0] == letra and punto in nave[1]:
+                        for p in nave[1]:
                             tablero.escribir_celda(cubo_rival, p, tablero.HUNDIDO)
-                    break
+                        break
+
+                nombre_nave = flota.CATALOGO_NAVES[letra]["nombre"]
+                print(f"¡HUNDIDO! Se ha destruido {nombre_nave} rival.")
+
+                if letra == "E":
+                    print("¡Estación Orbital destruida! Se ha otorgado una recompensa al atacante.")
+
+            elif estado_impacto == "averiada":
+                print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}!")
+
+                if letra == "D":
+                    celda_revelada = flota.revelar_celda_rival(flota_rival, cubo_rival)
+
+                    if celda_revelada:
+                        tablero.escribir_celda(cubo_rival, celda_revelada, tablero.DETECTADO)
+                        print(f"¡EFECTO DESTRUCTOR! Se reveló una nave rival en {tablero.punto_a_texto(celda_revelada)}.")
+                        
         elif estado_actual == tablero.SIN_EXPLORAR:
             tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
 
@@ -232,21 +252,10 @@ def hay_ganador(estado):
         rival = 1 - jugador
         flota_rival = estado["jugadores"][rival]["flota"]
 
-        if len(flota_rival) == 0:
-            continue
-
-        todas_hundidas = True
-        for nave in flota_rival:
-            letra, puntos, impactos = nave
-            if len(impactos) < len(puntos):
-                todas_hundidas = False
-                break
-            
-        if todas_hundidas:
+        if flota.flota_hundida(flota_rival):
             estado["terminada"] = True
             estado["ganador"] = jugador
-            return jugador
-        
+            return jugador  
     return None
       
 # ----------------------------------
