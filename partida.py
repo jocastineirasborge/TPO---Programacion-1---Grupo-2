@@ -431,7 +431,17 @@ def partida_1v1(estado):
                 ejecutar_turno(estado, {"arma": arma, "objetivo": objetivo})
                 print("Disparo realizado.")
                 if estado["terminada"]:
-                    print(f"\n¡Ganó el Jugador{estado['ganador'] + 1}!")
+                    estadisticas_finales = registro.obtener_estadisticas_partida()
+                    print("\n\========================================")
+                    print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
+                    print("\========================================")
+                    for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
+                        print(f"Estadísticas de {nombre_jugador}:")
+                        print(f"- Disparos realizados: {datos['disparos']}")
+                        print(f"- Impactos: {datos['impactos']} | Agua: {datos['agua']}")
+                        print(f"- Efectividad de tiro: {datos['efectividad']}")
+                        print(f"- Desglose de armas usadas: {datos['armas']}")
+
             except ErrorPartida as error:
                 print("Error:", error)
 
