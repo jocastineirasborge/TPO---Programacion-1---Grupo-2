@@ -10,7 +10,7 @@ import random
 import tablero
 import flota
 from radar import busqueda_lineal_nave
-from armamento import obtener_celdas_afectadas, obtener_catalogo_armas
+import armamento
 import registro
 
 # --------------------------------------------
@@ -39,7 +39,7 @@ def crear_jugador(n):
         "flota": [],
         "disparos": [],
         "arsenal": {
-            "T": None,
+            "T": None, #Ilimitado
             "R": 3,
             "C": 2,
             "S": 4,
@@ -78,6 +78,83 @@ def colocar_flota_automatica(jugador, n=8):
         None: Modifica de forma directa el diccionario.
     """
     jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], n=n)
+
+def solicitar_jugada(jugador_dict, cubo_rival, n):
+
+
+    arsenal = jugador_dict.get("arsenal", {})
+
+    texto_armas = []
+    for letra, cant in arsenal.items():
+        cant_str = "Infinito" if cant is None else str(cant)
+        texto_armas.append(f"{letra} ({cant_str})")
+    print("\nArmas disponibles: ", " | ".join(texto_armas))
+
+    while True:
+        arma = input("Seleccione arma (T / R / C / S / L): ").strip().upper()
+        if arma not in arsenal:
+            print("Arma inválida. Ingrese una de las opciones disponibles.")
+            continue
+        
+        cant = arsenal[arma]
+        if cant is not None and cant <= 0:
+            print(f"Munición insuficiente para {arma}. Elija otra.")
+            continue
+
+        break
+
+    if arma == "S":
+        while True:
+            eje = input("Eje para el Sonar (z/x/y): ").strip().lower()
+            if eje in ("z", "x", "y"):
+                break
+            print("Eje inválido. Debe ser 'z', 'x' o 'y'.")
+
+        while True:
+            try:
+                valor = int(input(f"Valor del plano (1 a {n}): ").strip())
+                if 1 <= valor <= n:
+                    break
+                print(f"El valor debe estar entre 1 y {n}.")
+            except ValueError:
+                print("Debe ingresar un número entero.")
+
+        return {
+            "arma": "S",
+            "eje": eje,
+            "valor": valor
+        }
+
+    elif arma == "L":
+        while True:
+            objetivo = input("Coordenada de origen (z, x, y): ").strip()
+            if tablero.texto_a_punto(objetivo, cubo_rival) is not None:
+                break
+            print("Coordenada inválida, inténtelo de nuevo.")
+
+        while True:
+            eje = input("Eje de barrido (x/y): ").strip().lower()
+            if eje in ("x", "y"):
+                break
+            print("Eje inválido. Para el láser debe elegir 'x' o 'y'.")
+
+        return {
+            "arma": "L",
+            "objetivo": objetivo,
+            "eje": eje
+        }
+
+    else:
+        while True:
+            objetivo = input("Objetivo (z, x, y): ").strip()
+            if tablero.texto_a_punto(objetivo, cubo_rival) is not None:
+                break
+            print("Coordenada inválida, inténtelo de nuevo.")
+
+        return {
+            "arma": arma,
+            "objetivo": objetivo,
+        }
 
 # ---------------------------------------------------
 # Funciones públicas obligatorias - Inicialización
@@ -144,69 +221,133 @@ def ejecutar_turno(estado, jugada):
     jugador_actual = estado["turno"]
     rival = 1 - jugador_actual
 
+    jugador_dict = estado["jugadores"][jugador_actual]
     cubo_rival = estado["jugadores"][rival]["cubo"]
     flota_rival = estado["jugadores"][rival]["flota"]
     n = estado["n"]
 
-    arma = jugada.get("arma", "T")
-    if not arma:
-        arma = "T"
-    
-    texto_objetivo = jugada.get("objetivo")
+    # ---------------------------------------------------
+    # Verificamos si el arma coincide con el catálogo
+    # ---------------------------------------------------
+    arma = jugada.get("arma", "").strip().upper()
+    arsenal = jugador_dict.get("arsenal", {})
+    if arma not in arsenal:
+        raise ErrorPartida(f"El arma {arma} no es válida.")
 
-    punto_objetivo = tablero.texto_a_punto(texto_objetivo, cubo_rival)
-    if punto_objetivo is None:
-        raise ValueError("Coordenada de disparo inválido.")
+    # -----------------------------
+    # Descontamos la munición
+    # -----------------------------
+    if not armamento.descontar_municion(arsenal, arma):
+        raise ErrorPartida(f"No queda munición disponible para {arma}.")
 
-    celdas_afectadas = obtener_celdas_afectadas(arma, punto_objetivo, n)
-
+    # ------------------------------------
+    # Procesamos según el tipo de arma
+    # ------------------------------------
     hubo_impacto = False
-    for punto in celdas_afectadas:
-        estado_actual = tablero.leer_celda(cubo_rival, punto)
+    texto_registro_objetivo = ""
 
-        if estado_actual == tablero.NAVE_OCULTA:
-            impacto_valido, letra, estado_impacto = flota.registrar_impacto(flota_rival, punto, arma)
+    # Si el arma es el Sonar
+    if arma == "S":
+        eje = jugada.get("eje", "z").lower()
+        try:
+            valor = int(jugada.get("valor", 1))
+        except (ValueError, TypeError):
+            raise ErrorPartida("El valor del plano debe ser un número entero.")
 
-            if estado_impacto == "inmune":
-                continue
+        texto_registro_objetivo = f"{eje}={valor}"
 
-            if impacto_valido:
-                hubo_impacto = True
-                tablero.escribir_celda(cubo_rival, punto, tablero.IMPACTO)
+        celdas_plano = armamento.obtener_celdas_afectadas("S", (eje, valor), n)
 
-            if estado_impacto == "hundida":
-                for nave in flota_rival:
-                    if nave[0] == letra and punto in nave[1]:
-                        for p in nave[1]:
-                            tablero.escribir_celda(cubo_rival, p, tablero.HUNDIDO)
-                        break
+        contactos_detectados = 0
+        for punto in celdas_plano:
+            estado_celda = tablero.leer_celda(cubo_rival, punto)
 
-                nombre_nave = flota.CATALOGO_NAVES[letra]["nombre"]
-                print(f"¡HUNDIDO! Se ha destruido {nombre_nave} rival.")
+            if estado_celda == tablero.NAVE_OCULTA:
+                contactos_detectados += 1
+                tablero.escribir_celda(cubo_rival, punto, tablero.DETECTADO)
 
-                if letra == "E":
-                    print("¡Estación Orbital destruida! Se ha otorgado una recompensa al atacante.")
+            elif estado_celda == tablero.DETECTADO:
+                contactos_detectados += 1
 
-            elif estado_impacto == "averiada":
-                print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}!")
+        print(f"\n[SONAR] Escaneo en plano {eje}={valor}: {contactos_detectados} contactos detectados.")
+        resultado_str = f"{contactos_detectados} contactos"
 
-                if letra == "D":
-                    celda_revelada = flota.revelar_celda_rival(flota_rival, cubo_rival)
+    #Armas ofensivas
+    else:
+        texto_objetivo = jugada.get("objetivo")
 
-                    if celda_revelada:
-                        tablero.escribir_celda(cubo_rival, celda_revelada, tablero.DETECTADO)
-                        print(f"¡EFECTO DESTRUCTOR! Se reveló una nave rival en {tablero.punto_a_texto(celda_revelada)}.")
-                        
-        elif estado_actual == tablero.SIN_EXPLORAR:
-            tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
+        if arma == "L":
+            eje_laser = jugada.get("eje", "x").lower()
+            punto_origen = tablero.texto_a_punto(texto_objetivo, cubo_rival)
+            if punto_origen is None or eje_laser not in ("x", "y"):
+                raise ErrorPartida("Los parámetros para el barrido láser son inválidos.")
 
-    #Guardar en el historial
+            texto_registro_objetivo = f"{texto_objetivo} (eje {eje_laser})"
+            celdas_afectadas = armamento.obtener_celdas_afectadas("L", (punto_origen, eje_laser), n)
+
+        #Torpedo, Racimo y Carga de profundidad
+        else:
+            punto_objetivo = tablero.texto_a_punto(texto_objetivo, cubo_rival)
+            if punto_objetivo is None:
+                raise ErrorPartida("Coordenada de disparo inválida.")
+
+            texto_registro_objetivo = texto_objetivo
+            celdas_afectadas = armamento.obtener_celdas_afectadas(arma, punto_objetivo, n)
+
+        #Impactar celdas afectadas
+        for punto in celdas_afectadas:
+            estado_actual = tablero.leer_celda(cubo_rival, punto)
+
+            if estado_actual in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+                impacto_valido, letra, estado_impacto = flota.registrar_impacto(flota_rival, punto, arma)
+
+                if estado_impacto == "inmune":
+                    continue
+
+                if impacto_valido:
+                    hubo_impacto = True
+                    tablero.escribir_celda(cubo_rival, punto, tablero.IMPACTO)
+
+                if estado_impacto == "hundida":
+                    for nave in flota_rival:
+                        if nave[0] == letra and punto in nave[1]:
+                            for p in nave[1]:
+                                tablero.escribir_celda(cubo_rival, p, tablero.HUNDIDO)
+                            break
+
+                    nombre_nave = flota.CATALOGO_NAVES[letra]["nombre"]
+                    print(f"¡HUNDIDO! Se ha destruido {nombre_nave} rival.")
+
+                    if letra == "E":
+                        print("¡Estación Orbital destruida! Se ha otorgado una recompensa al atacante.")
+
+                elif estado_impacto == "averiada":
+                    print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}")
+
+                    if letra == "D":
+                        celda_revelada = flota.revelar_celda_rival(flota_rival, cubo_rival)
+
+                        if celda_revelada:
+                            tablero.escribir_celda(cubo_rival, celda_revelada, tablero.DETECTADO)
+                            print(f"¡EFECTO DESTRUCTOR! Se reveló una nave rival en {tablero.punto_a_texto(celda_revelada)}.")
+
+            elif estado_actual == tablero.SIN_EXPLORAR:
+                tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
+
+        resultado_str = "Impacto" if hubo_impacto else "Agua"
+
+
+    # -------------------------------
+    # Registramos en el historial
+    # -------------------------------
     num_turno = len(registro.obtener_historial()) + 1
-    jugador = f"Jugador {estado['turno'] + 1}"
-    resultado = "Impacto" if hubo_impacto else "Agua"
+    id_jugador = f"Jugador {jugador_actual + 1}"
 
-    registro.registrar_turno(num_turno, jugador, arma, texto_objetivo, resultado)
+    registro.registrar_turno(num_turno, id_jugador, arma, texto_registro_objetivo, resultado_str)
 
+    # ---------------------------------------------------
+    # Verificamos si hay ganador y cambiamos de turno
+    # ---------------------------------------------------
     ganador = hay_ganador(estado)
     if ganador is None:
         estado["turno"] = rival
@@ -421,25 +562,14 @@ def partida_1v1(estado):
         opcion = input("Opción: ").strip()
 
         if opcion == "1":
-            catalogo = obtener_catalogo_armas()
-            while True:
-                arma = input("Arma (T): ").strip().upper()
-                if not arma:
-                    arma = "T"
-                if arma in catalogo:
-                    break
-                print("Arma no válida.")
-
+            jugador_dict = estado["jugadores"][jugador]
             cubo_rival = estado["jugadores"][1 - jugador]["cubo"]
-            while True:
-                objetivo = input("Objetivo: ").strip()
-                punto = tablero.texto_a_punto(objetivo, cubo_rival)
-                if punto is not None:
-                    break
-                print("Coordenada inválida, inténtelo de nuevo.")
+            n = estado["n"]
+
+            jugada = solicitar_jugada(jugador_dict, cubo_rival, n)
 
             try:
-                ejecutar_turno(estado, {"arma": arma, "objetivo": objetivo})
+                ejecutar_turno(estado, jugada)
                 print("Disparo realizado.")
 
                 if estado["terminada"]:
@@ -449,7 +579,7 @@ def partida_1v1(estado):
                     print(f"GANADOR: JUGADOR{ganador}")
                     print("\n========================================")
                     print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
-                    print("\========================================")
+                    print("\n========================================")
                     for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
                         print(f"Estadísticas de {nombre_jugador}:")
                         print(f"- Disparos realizados: {datos['disparos']}")
@@ -494,25 +624,14 @@ def partida_vs_maquina(estado):
             opcion = input("Opción: ")
 
             if opcion == "1":
-                catalogo = obtener_catalogo_armas()
-                while True:
-                    arma = input("Arma (T): ").strip().upper()
-                    if not arma:
-                        arma = "T"
-                    if arma in catalogo:
-                        break
-                    print("Arma no válida.")
-
+                jugador_dict = estado["jugadores"][0]
                 cubo_rival = estado["jugadores"][1]["cubo"]
-                while True:
-                    objetivo = input("Objetivo: ").strip()
-                    punto = tablero.texto_a_punto(objetivo, cubo_rival)
-                    if punto is not None:
-                        break
-                    print("Coordenada inválida, inténtelo de nuevo.")
+                n = estado["n"]
+
+                jugada = solicitar_jugada(jugador_dict, cubo_rival, n)
 
                 try:
-                    ejecutar_turno(estado,{"arma": arma,"objetivo": objetivo})
+                    ejecutar_turno(estado, jugada)
                     print("Disparo realizado.")
                 except ErrorPartida as error:
                     print("Error:", error)
@@ -547,7 +666,7 @@ def partida_vs_maquina(estado):
                 print("GANADOR: JUGADOR 2(Máquina)")
                 print("\n========================================")
                 print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
-                print("\========================================")
+                print("\n========================================")
                 for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
                     print(f"Estadísticas de {nombre_jugador}:")
                     print(f"- Disparos realizados: {datos['disparos']}")

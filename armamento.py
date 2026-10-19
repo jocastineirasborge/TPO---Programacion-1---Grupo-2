@@ -2,7 +2,7 @@
 Módulo armamento.py
 Administra el catálogo de armas, la munición disponible y las celdas afectadas por cada disparo. 
 """
-
+import tablero
 # ---------------------------------------------
 # Catálogo de armas
 # ---------------------------------------------
@@ -79,28 +79,64 @@ def efecto_misil_de_racimo(objetivo, n):
     """
     Para la entrega 2.
     """
-    pass
+    z, x, y = objetivo
+
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+
+    candidatos = [(z, x, y), (z - 1, x, y), (z + 1, x, y), (z, x - 1, y), (z, x + 1, y), (z, x, y - 1), (z, x, y + 1)]
+
+    return [p for p in candidatos if 1 <= p[0] <= n and 1 <= p[1] <= n and 1 <= p[2] <= n]
 
 
 def efecto_carga(objetivo, n):
     """
     Para la entrega 2.
     """
-    pass
+    z, x, y = objetivo
+
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+
+    return [(i, x, y) for i in range(1, n + 1)]
 
 
-def efecto_barrido(objetivo, n):
+def efecto_barrido(datos_laser, n):
     """
     Para la entrega 2.
     """
-    pass
+    objetivo, eje = datos_laser
+    z, x, y = objetivo
+
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n) or eje not in ("x", "y"):
+        return []
+
+    if eje == "x":
+        return [(z, i, y) for i in range(1, n + 1)]
+    else:
+        return [(z, x, i) for i in range(1, n + 1)]
+    
 
 
-def efecto_sonar(objetivo, n):
+def efecto_sonar(datos_sonar, n):
     """
     Para la entrega 2.
     """
-    pass
+    eje, valor = datos_sonar
+    if eje not in ("z", "x", "y") or not (1 <= valor <= n):
+        return []
+
+    puntos = []
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            if eje == "z":
+                puntos.append((valor, i, j))
+            elif eje == "x":
+                puntos.append((i, valor, j))
+            elif eje == "y":
+                puntos.append((i, j, valor))
+
+    return puntos
 
 
 def efecto_onda(objetivo, n):
@@ -130,7 +166,24 @@ DESPACHO_ARMAS = {
     "O": efecto_onda,
     "G": efecto_torpedo_guiado
 }
+# -----------------------
+# Descontar munición
+# -----------------------
 
+def descontar_municion(arsenal, arma):
+
+
+    if arma not in arsenal:
+        return False
+
+    cant = arsenal[arma]
+    if cant is None:
+        return True
+    if cant > 0:
+        arsenal[arma] -= 1
+        return True
+
+    return False
 
 # ----------------------------------
 # Funcion principal de ejecución
