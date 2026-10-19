@@ -104,4 +104,4 @@ def demostracion_comparacion():
 
     comparar_busquedas(c, 8)
 
-demostracion_comparacion()
+#demostracion_comparacion()
