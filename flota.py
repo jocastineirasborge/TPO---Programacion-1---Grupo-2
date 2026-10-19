@@ -1,6 +1,7 @@
 """
 Módulo flota.py
-Administra el catálogo de naves, reglas de ubicación y la colocación manual y automática dentro del cubo.
+Administra el catálogo de naves, reglas de ubicación, la colocación manual y automática dentro del cubo,
+y el registro de impactos, naves averiadas y hundidas (Entrega 2).
 """
 
 import random
@@ -17,8 +18,7 @@ CATALOGO_NAVES = {
     "C": {"nombre": "Crucero", "celdas": 4, "cantidad": 1},
     "P": {"nombre": "Portaaviones", "celdas": 5, "cantidad": 1},
     "E": {"nombre": "Estacion orbital", "celdas": 8, "cantidad": 1}
-    }
-
+}
 
 FLOTA_UBICADA = []
 
@@ -36,13 +36,11 @@ def inicializar_flota():
         None.
     """
     FLOTA_UBICADA.clear()
-    
+
 
 def obtener_catalogo_naves():
     """
     Objetivo: Devolver la lista del catálogo de naves disponible.
-    Devuelve:
-        list: Lista de tuplas con el catálogo de naves.
     """
     return CATALOGO_NAVES
 
@@ -51,41 +49,37 @@ def obtener_puntos_tramo(desde, hasta):
     """
     Objetivo: Generar la lista de puntos entre 'desde' y 'hasta' a lo largo de un solo eje.
     Parámetros:
-        - desde (tuple): Coordenada inicial (z, y, x).
-        - hasta (tuple): Coordenada final (z, y, x).
+        - desde (tuple): Coordenada inicial (z, x, y).
+        - hasta (tuple): Coordenada final (z, x, y).
     Devuelve:
         list: Lista de tuplas con los puntos intermedios, o [] si cambia en más de un eje.
     """
     z1, x1, y1 = desde
     z2, x2, y2 = hasta
 
-    dz = abs(z2 - z1)
-    dx = abs(x2 - x1)
-    dy = abs(y2 - y1)
+    # Contar cuántos ejes cambian sin usar abs
+    diferentes = 0
+    if z1 != z2:
+        diferentes += 1
+    if x1 != x2:
+        diferentes += 1
+    if y1 != y2:
+        diferentes += 1
 
-    # Contar en cuántos ejes hay movimiento
-    ejes_cambiados = 0
-    if dz > 0:
-        ejes_cambiados += 1
-    if dx > 0:
-        ejes_cambiados += 1
-    if dy > 0:
-        ejes_cambiados += 1
-
-    if ejes_cambiados > 1:
+    if diferentes > 1:
         return []
 
     puntos = []
-    if dz > 0:
-        paso = 1 if z2 >= z1 else -1
+    if z1 != z2:
+        paso = 1 if z1 < z2 else -1
         for z in range(z1, z2 + paso, paso):
             puntos.append((z, x1, y1))
-    elif dx > 0:
-        paso = 1 if x2 >= x1 else -1
+    elif x1 != x2:
+        paso = 1 if x1 < x2 else -1
         for x in range(x1, x2 + paso, paso):
             puntos.append((z1, x, y1))
-    elif dy > 0:
-        paso = 1 if y2 >= y1 else -1
+    elif y1 != y2:
+        paso = 1 if y1 < y2 else -1
         for y in range(y1, y2 + paso, paso):
             puntos.append((z1, x1, y))
     else:
@@ -103,7 +97,7 @@ def validar_reglas_ubicacion(nave_letra, puntos, n):
     Objetivo: Validar que los puntos cumplan con las restricciones específicas de cada nave.
     Parámetros:
         - nave_letra (str): Identificador de la nave.
-        - puntos (list): Lista de coordenadas (z, y, x).
+        - puntos (list): Lista de coordenadas (z, x, y).
         - n (int): Tamaño del cubo.
     Devuelve:
         bool: True si cumple las reglas, False en caso contrario.
@@ -175,8 +169,8 @@ def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
         - cubo (list): Matriz 3D del tablero.
         - flota (list): Lista con el estado de las naves ubicadas.
         - nave (str): Letra identificadora de la nave.
-        - punto_desde (tuple): Coordenada inicial (z, y, x).
-        - punto_hasta (tuple): Coordenada final (z, y, x).
+        - punto_desde (tuple): Coordenada inicial (z, x, y).
+        - punto_hasta (tuple): Coordenada final (z, x, y).
         - n (int): Tamaño del cubo.
     Devuelve:
         tuple: (cubo, flota) actualizados.
@@ -218,7 +212,9 @@ def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
     for p in puntos:
         tablero.escribir_celda(cubo, p, tablero.NAVE_OCULTA)
 
-    flota.append((nave, puntos, []))
+    # Registro de impactos por celda
+    impactos_iniciales = {p: 0 for p in puntos}
+    flota.append((nave, puntos, impactos_iniciales))
     return cubo, flota
 
 
@@ -227,7 +223,7 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
     Objetivo: Ubicar de forma automática toda la flota respetando todas las reglas.
     Parámetros:
         - cubo (list): Matriz 3D del tablero.
-        - catalogo (list): Lista de tuplas con las naves. Por defecto usa CATALOGO_NAVES.
+        - catalogo (dict): Catálogo de naves. Por defecto usa CATALOGO_NAVES.
         - semilla (int): Semilla aleatoria opcional para pruebas.
         - n (int): Tamaño del cubo.
     Devuelve:
@@ -244,7 +240,7 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
         celdas = datos["celdas"]
         cantidad = datos["cantidad"]
 
-        for i in range(0, cantidad):
+        for _ in range(cantidad):
             colocada = False
             intentos = 0
             while not colocada and intentos < 2000:
@@ -275,3 +271,123 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
                 except ValueError:
                     pass
     return flota
+
+#Entrega 2
+# --------------------------------------------------------
+# Control de impactos, averías y hundimiento 
+# --------------------------------------------------------
+
+def nave_hundida(nave_letra, puntos, impactos):
+    """
+    Objetivo: Determinar si todas las celdas de una nave sufrieron el daño suficiente.
+    Parámetros:
+        - nave_letra (str): Identificador de la nave.
+        - puntos (list): Lista de coordenadas (z, x, y) que ocupa la nave.
+        - impactos (dict): Mapa del contador de impactos por celda.
+    Devuelve:
+        bool: True si la nave está hundida, False en caso contrario.
+    """
+    # Averiguamos cuántos disparos requiere cada celda
+    if nave_letra == "P":
+        impactos_necesarios = 2  # Portaaviones necesita 2 por celda
+    else:
+        impactos_necesarios = 1  # Las demás naves necesitan 1 por celda
+
+    # Revisamos cada punto de la nave uno por uno
+    for p in puntos:
+        cant_impactos = 0
+        if p in impactos:
+            cant_impactos = impactos[p]
+
+        # Si alguna celda no alcanza el mínimo de impactos, la nave sigue viva
+        if cant_impactos < impactos_necesarios:
+            return False
+
+    # Si todas las celdas alcanzaron la cantidad necesaria, está hundida
+    return True
+
+
+def registrar_impacto(flota, punto, arma_usada="T"):
+    """
+    Objetivo: Registrar el impacto de un disparo sobre una coordenada específica.
+    Parámetros:
+        - flota (list): Lista de naves de la partida.
+        - punto (tuple): Coordenada (z, x, y) a impactar.
+        - arma_usada (str): Identificador del arma enviada.
+    Devuelve:
+        tuple: (impacto_valido, nave_letra, estado)
+               estado puede ser "averiada", "hundida", "inmune" o None.
+    """
+    for nave in flota:
+        letra = nave[0]
+        puntos = nave[1]
+        impactos = nave[2]
+
+        # Si el punto disparado pertenece a esta nave
+        if punto in puntos:
+
+            # Regla del Submarino: El Láser (L) no lo afecta
+            if letra == "S" and arma_usada == "L":
+                return False, letra, "inmune"
+
+            # Sumamos 1 al contador de impactos de esta celda
+            if punto in impactos:
+                impactos[punto] = impactos[punto] + 1
+            else:
+                impactos[punto] = 1
+
+            # Revisamos si con este disparo la nave se hundió
+            if nave_hundida(letra, puntos, impactos):
+                return True, letra, "hundida"
+            else:
+                return True, letra, "averiada"
+
+    # Si el punto no tocó ninguna nave
+    return False, None, None
+
+
+def flota_hundida(flota):
+    """
+    Objetivo: Comprobar si todas las naves de la flota han sido destruidas.
+    Parámetros:
+        - flota (list): Lista con el estado de las naves de la partida.
+    Devuelve:
+        bool: True si todas las naves están hundidas, False en caso contrario.
+    """
+    if len(flota) == 0:
+        return False
+
+    for nave in flota:
+        letra = nave[0]
+        puntos = nave[1]
+        impactos = nave[2]
+
+        if not nave_hundida(letra, puntos, impactos):
+            return False
+
+    return True
+
+
+def revelar_celda_rival(flota, cubo):
+    """
+    Objetivo: Comportamiento propio del Destructor (D): al ser impactado revela una celda ocupada del rival.
+    Parámetros:
+        - flota (list): Lista de la flota rival.
+        - cubo (list): Matriz 3D del tablero rival.
+    Devuelve:
+        tuple o None: Coordenada (z, x, y) de la celda revelada, o None si no hay celdas para revelar.
+    """
+    celdas_candidatas = []
+
+    for nave in flota:
+        puntos = nave[1]
+        for p in puntos:
+            # Si en el cubo la celda todavía tiene una nave oculta
+            if tablero.leer_celda(cubo, p) == tablero.NAVE_OCULTA:
+                celdas_candidatas.append(p)
+
+    # Si hay celdas disponibles para revelar, elegimos una al azar
+    if len(celdas_candidatas) > 0:
+        return random.choice(celdas_candidatas)
+
+    return None
