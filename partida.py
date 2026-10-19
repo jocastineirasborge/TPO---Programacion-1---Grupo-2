@@ -34,7 +34,18 @@ def crear_jugador(n):
     Devuelve:
         dict: Diccionario con la estructura básica del jugador.
     """
-    return {"cubo": tablero.crear_cubo(n),"flota": [],"disparos": []}
+    return {
+        "cubo": tablero.crear_cubo(n),
+        "flota": [],
+        "disparos": [],
+        "arsenal": {
+            "T": None,
+            "R": 3,
+            "C": 2,
+            "S": 4,
+            "L": 2
+        }
+    }
 
 
 def formatear_pendientes(pendientes):
@@ -430,9 +441,13 @@ def partida_1v1(estado):
             try:
                 ejecutar_turno(estado, {"arma": arma, "objetivo": objetivo})
                 print("Disparo realizado.")
+
                 if estado["terminada"]:
+                    ganador = estado["ganador"] + 1
                     estadisticas_finales = registro.obtener_estadisticas_partida()
-                    print("\n\========================================")
+                    print("¡TERMINÓ EL JUEGO!")
+                    print(f"GANADOR: JUGADOR{ganador}")
+                    print("\n========================================")
                     print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
                     print("\========================================")
                     for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
@@ -508,8 +523,10 @@ def partida_vs_maquina(estado):
 
             elif opcion == "3":
                 break
+
             else:
                 print("Opción inválida")
+
         else:
             print("----------------------------")
             print("Turno de la máquina")
@@ -519,11 +536,24 @@ def partida_vs_maquina(estado):
                 print("La máquina realizó su disparo")
             except ErrorPartida as error:
                 print("Error:", error)
+
         if estado["terminada"]:
-            if estado["ganador"] == 0:
-                print("Ganaste.")
+            ganador = estado["ganador"] + 1
+            estadisticas_finales = registro.obtener_estadisticas_partida()
+            print("¡TERMINÓ EL JUEGO!")
+            if ganador == 0:
+                print("GANADOR: JUGADOR 1(Usted)")
             else:
-                print("Ganó la máquina")
+                print("GANADOR: JUGADOR 2(Máquina)")
+                print("\n========================================")
+                print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
+                print("\========================================")
+                for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
+                    print(f"Estadísticas de {nombre_jugador}:")
+                    print(f"- Disparos realizados: {datos['disparos']}")
+                    print(f"- Impactos: {datos['impactos']} | Agua: {datos['agua']}")
+                    print(f"- Efectividad de tiro: {datos['efectividad']}")
+                    print(f"- Desglose de armas usadas: {datos['armas']}")
 
 
 def menu_principal():

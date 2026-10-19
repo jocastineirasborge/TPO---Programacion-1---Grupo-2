@@ -69,7 +69,7 @@ def obtener_estadisticas_jugador(jugador_num):
         efectividad = (impactos / disparos) * 100
         efectividad_str = f"{efectividad:.2f}%"
     else:
-        efectividad_str = 0.0
+        efectividad_str = "0.00%"
 
     return {
         "jugador": jugador_num,
@@ -77,7 +77,7 @@ def obtener_estadisticas_jugador(jugador_num):
         "impactos": impactos,
         "agua": agua,
         "efectividad": efectividad_str,
-        "armas": arma
+        "armas": armas
     }
 
 
