@@ -64,7 +64,7 @@ def efecto_torpedo(objetivo, n):
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
         - Objetivo(tuple): Coordenada en (z, x, y) del disparo.
-        - n(int): Tamaño del cubo para validación.
+        - n(int): Tamaño del arista del cubo.
     Devuelve:
         List: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
@@ -77,7 +77,13 @@ def efecto_torpedo(objetivo, n):
 
 def efecto_misil_de_racimo(objetivo, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el misil de racimo.
+    Parámetros:
+        - objetivo(tuple): Coordenada central (z, x, y) del disparo.
+        - n(int): Tamaño del arista del cubo.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con las celdas afectadas dentro de los límites del cubo
+        o [] si la coordenada se encuentra fuera de los límites.
     """
     z, x, y = objetivo
 
@@ -91,7 +97,13 @@ def efecto_misil_de_racimo(objetivo, n):
 
 def efecto_carga(objetivo, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el disparo de la carga.
+    Parámetros:
+        - objetivo(tuple): Coordenada central (z, x, y) del disparo.
+        - n(int): Tamaño del arista del cubo.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con las celdas afectadas dentro de los límites del cubo
+        o [] si la coordenada se encuentra fuera de los límites.
     """
     z, x, y = objetivo
 
