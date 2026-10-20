@@ -73,15 +73,24 @@ def colocar_flota_automatica(jugador, n=8):
     Objetivo: Delega la colocación aleatoria a flota.py y actualiza la flota del jugador.
     Parámetros:
         - jugador(dict): Diccionario del jugador con la clave 'cubo'.
-        - n(int): Tamaño de la dimensión del cubo(valor por defecto 8).
+        - n(int): Tamaño de la arista del cubo(valor por defecto 8).
     Devuelve:
         None: Modifica de forma directa el diccionario.
     """
     jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], n=n)
 
+
 def solicitar_jugada(jugador_dict, cubo_rival, n):
-
-
+    """
+    Objetivo: Solicita e interactúa por consola con el jugador para obtener
+    un arma disponible dentro del arsenal.
+    Parámetros:
+        - jugador_dict(dict): Diccionario con la información del jugador actual.
+        - cubo_rival(list): Matriz 3D que representa el tablero del oponente.
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        dict: Diccionario con la estructura de la jugada seleccionada.
+    """
     arsenal = jugador_dict.get("arsenal", {})
 
     texto_armas = []

@@ -5,6 +5,7 @@ y calcula las métricas de rendimiento.
 """
 import tablero
 import flota
+
 # -----------------------------------
 # Búsqueda de métricas y de nave
 # -----------------------------------
@@ -67,7 +68,9 @@ def busqueda_optimizada(cubo, id_nave, n):
 
     return coordenadas_encontradas, comparaciones
 
-
+# --------------------------------
+# Comparación de las búsquedas
+# --------------------------------
 def comparar_busquedas(cubo, n=8):
 
 
@@ -98,10 +101,16 @@ def comparar_busquedas(cubo, n=8):
         print(f"TOTAL: Lineal = {total_lineal} ops | Optimizada = {total_optimizada} ops")
         print(f"¡La búsqueda optimizada redujo un {porcentaje_ahorro:.1f}% las operaciones!\n")
 
+# --------------------------------
+# Demostración de la comparación
+# --------------------------------
 def demostracion_comparacion():
     c = tablero.crear_cubo(8)
     f = flota.ubicacion_automatica(c, n=8)
 
     comparar_busquedas(c, 8)
 
+def sonar_por_planos():
+    pass
+# Ejecutar si desea ver las
 #demostracion_comparacion()

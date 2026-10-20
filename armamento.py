@@ -115,7 +115,14 @@ def efecto_carga(objetivo, n):
 
 def efecto_barrido(datos_laser, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el disparo del barrido láser.
+    Parámetros:
+        - datos_laser(tuple): Tupla que contiene como información la coordenada central y
+        el eje de barrido.
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas correspondiente a las N celdas del largo del eje elegido,
+        o [] si la coordenada o el eje no son válidos.
     """
     objetivo, eje = datos_laser
     z, x, y = objetivo
@@ -129,26 +136,20 @@ def efecto_barrido(datos_laser, n):
         return [(z, x, i) for i in range(1, n + 1)]
     
 
-
 def efecto_sonar(datos_sonar, n):
     """
-    Para la entrega 2.
+    Objetivo: Obtener la lista de celdas pertenecientes al plano para el escaneo
+    del sonar(sin inflingir daño).
+    Parámetros:
+        - datos_sonar(tuple): Tupla indicando el eje del plano y el número de capa
+        o corte.
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas con las N*N celdas pertenecientes al plano solicitado,
+        o [] si el eje o el valor ingresado no son válidos.
     """
     eje, valor = datos_sonar
-    if eje not in ("z", "x", "y") or not (1 <= valor <= n):
-        return []
-
-    puntos = []
-    for i in range(1, n + 1):
-        for j in range(1, n + 1):
-            if eje == "z":
-                puntos.append((valor, i, j))
-            elif eje == "x":
-                puntos.append((i, valor, j))
-            elif eje == "y":
-                puntos.append((i, j, valor))
-
-    return puntos
+    return tablero.puntos_de_plano(tablero.crear_cubo(n), eje, valor)
 
 
 def efecto_onda(objetivo, n):
@@ -183,7 +184,11 @@ DESPACHO_ARMAS = {
 # -----------------------
 
 def descontar_municion(arsenal, arma):
-
+    """
+    Objetivo: Descontar una unidad de munición del arma especificada
+    dentro del arsenal del jugador.
+    Parámetros:
+    """
 
     if arma not in arsenal:
         return False
