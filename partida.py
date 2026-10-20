@@ -83,7 +83,17 @@ def pedir_tamanio_cubo():
 
 
     while True:
-        entrada = 
+        entrada = input("Ingrese el tamaño del cubo N (entre 5 y 20, Enter para 8 por" \
+        "defecto): ").strip()
+        if entrada == "":
+            return TAMANO_CUBO
+        if entrada.isdigit():
+            n = int(entrada)
+            if 5 <= n <= 20:
+                return n
+        print("Tamaño inválido. Debe ingresar un entero entre 5 y 20.")
+
+
 def solicitar_jugada(jugador_dict, cubo_rival, n):
     """
     Objetivo: Solicita e interactúa por consola con el jugador para obtener
@@ -514,6 +524,9 @@ def preparar_1v1():
         lista para comenzar.
     """
     registro.inicializar_registro()
+
+    n = pedir_tamanio_cubo()
+    configuracion = {"n": n}
     estado = nueva_partida_1v1({"n": TAMANO_CUBO})
 
     print("\n--- Flota de Jugador 1 ---")
@@ -537,13 +550,15 @@ def preparar_vs_maquina():
         y lista para comenzar.
     """
     registro.inicializar_registro()
-    estado = nueva_partida_vs_maquina({"n": TAMANO_CUBO},"normal")
-    n = estado["n"]
+
+    n = pedir_tamanio_cubo()
+    configuracion = {"n": n}
+    estado = nueva_partida_vs_maquina(configuracion,"normal")
 
     print("\n--- Flota del Jugador ---")
     submenú_ubicacion(estado["jugadores"][0], n)
 
-    print("\n--- Flota de la máquina ---")
+    print("\n--- Flota de la Máquina ---")
     colocar_flota_automatica(estado["jugadores"][1], n)
     print("Flota de la máquina ubicada automáticamente.")
 
