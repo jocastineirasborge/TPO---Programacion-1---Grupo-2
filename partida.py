@@ -79,7 +79,11 @@ def colocar_flota_automatica(jugador, n=8):
     """
     jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], n=n)
 
+def pedir_tamanio_cubo():
 
+
+    while True:
+        entrada = 
 def solicitar_jugada(jugador_dict, cubo_rival, n):
     """
     Objetivo: Solicita e interactúa por consola con el jugador para obtener
