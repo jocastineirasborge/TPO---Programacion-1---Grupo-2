@@ -9,7 +9,7 @@ y los menús.
 import random
 import tablero
 import flota
-from radar import busqueda_lineal_nave
+import radar
 import armamento
 import registro
 
@@ -271,6 +271,14 @@ def ejecutar_turno(estado, jugada):
 
     # Si el arma es el Sonar
     if arma == "S":
+        contactos, celdas_plano = radar.sonar_por_planos(cubo_rival, eje, valor)
+
+        for punto in celdas_plano:
+            if tablero.leer_celda(cubo_rival, punto) == tablero.NAVE_OCULTA:
+                tablero.escribir_celda(cubo_rival, punto, tablero.DETECTADO)
+
+        contactos_str = "contacto detectado" if contactos else "contactos detectados"
+        print(f"\n[SONAR] Escaneo en plano {eje} = {valor}: {contactos} {contactos_str}.")
         eje = jugada.get("eje", "z").lower()
         try:
             valor = int(jugada.get("valor", 1))

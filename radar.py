@@ -110,7 +110,19 @@ def demostracion_comparacion():
 
     comparar_busquedas(c, 8)
 
-def sonar_por_planos():
-    pass
+def sonar_por_planos(cubo, eje, valor):
+
+
+    puntos = tablero.puntos_de_plano(cubo, eje, valor)
+    contactos = 0
+
+    for p in puntos:
+        estado_celda = tablero.leer_celda(cubo, p)
+        if estado_celda in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+            contactos += 1
+
+    return contactos, puntos
+
+
 # Ejecutar si desea ver las
 #demostracion_comparacion()
