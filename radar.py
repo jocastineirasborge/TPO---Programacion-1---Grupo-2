@@ -33,8 +33,18 @@ def busqueda_lineal_nave(cubo, id_nave, n):
     return coordenadas_encontradas, comparaciones
 
 def busqueda_optimizada(cubo, id_nave, n):
-
-
+    """
+    Objetivo: Localizar las celdas ocupadas por una nave optimizando el recorrido
+    mediante el acotamiento de límites según reglas de ubicación y aplicando un corte
+    temprano al hallar todas las celdas.
+    Parámetros:
+        - cubo(list): Matriz anidada 3D del tablero de juego.
+        - id_nave(str): Letra identificadora de la nave.
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        tuple: Devuelve una tupla que consiste de la lista de tuplas con las
+        coordenadas válidas y la cantidad de evaluaciones realizadas.
+    """
     catalogo = flota.obtener_catalogo_naves()
     cant_esperada = catalogo.get(id_nave, {}).get("celdas", 0)
 
@@ -72,7 +82,13 @@ def busqueda_optimizada(cubo, id_nave, n):
 # Comparación de las búsquedas
 # --------------------------------
 def comparar_busquedas(cubo, n=8):
-
+    """
+    Objetivo: Comparar la eficiencia y el resultado de los dos métodos
+    de búsqueda.
+    Parámetros:
+        - cubo(list): Matriz anidada 3D del tablero de juego.
+        - n(int): 
+    """
 
     naves = ["F", "D", "S", "C", "P", "E"]
 
@@ -111,8 +127,14 @@ def demostracion_comparacion():
     comparar_busquedas(c, 8)
 
 def sonar_por_planos(cubo, eje, valor):
-
-
+    """
+    Objetivo: Recorrer e inspeccionar un plano del cubo oponente para
+    detectar y contar la cantidad de contactos de naves.
+    Parámetros:
+        - cubo(list): Matriz anidada del tablero de juego.
+        - eje(str): Identificador del eje de plano.
+        - valor(int): Número de capa o corte del plano.
+    """
     puntos = tablero.puntos_de_plano(cubo, eje, valor)
     contactos = 0
 

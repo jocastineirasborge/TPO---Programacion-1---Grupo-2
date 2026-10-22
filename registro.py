@@ -12,6 +12,7 @@ def inicializar_registro():
 
     HISTORIAL_PARTIDA.clear()
 
+
 def registrar_turno(num_turno, jugador, arma, objetivo, resultado):
     """
     Objetivo: Agregar la información del turno realizado al historial.
@@ -26,6 +27,7 @@ def registrar_turno(num_turno, jugador, arma, objetivo, resultado):
     registro = (num_turno, jugador, arma, objetivo, resultado)
     HISTORIAL_PARTIDA.append(registro)
 
+
 def obtener_historial():
     """
     Objetivo: Devuelve la lista completa con todos los turnos registrados.
@@ -34,6 +36,7 @@ def obtener_historial():
     """
 
     return HISTORIAL_PARTIDA
+
 
 def obtener_ultimo_turno():
     """
@@ -45,6 +48,7 @@ def obtener_ultimo_turno():
     if not len(HISTORIAL_PARTIDA):
         return None
     return HISTORIAL_PARTIDA[-1]
+
 
 def obtener_estadisticas_jugador(jugador_num):
 

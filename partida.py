@@ -80,8 +80,13 @@ def colocar_flota_automatica(jugador, n=8):
     jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], n=n)
 
 def pedir_tamanio_cubo():
-
-
+    """
+    Objetivo: Solicitarle al usuario el tamaño de la arista del cubo(entre 5 y 20).
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        int: Número entero correspondiente a la arista del cubo.
+    """
     while True:
         entrada = input("Ingrese el tamaño del cubo N (entre 5 y 20, Enter para 8 por" \
         "defecto): ").strip()
@@ -535,7 +540,7 @@ def preparar_1v1():
 
     n = pedir_tamanio_cubo()
     configuracion = {"n": n}
-    estado = nueva_partida_1v1({"n": TAMANO_CUBO})
+    estado = nueva_partida_1v1(configuracion)
 
     print("\n--- Flota de Jugador 1 ---")
     submenú_ubicacion(estado["jugadores"][0])

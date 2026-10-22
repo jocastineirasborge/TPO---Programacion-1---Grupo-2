@@ -272,7 +272,7 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
                     pass
     return flota
 
-#Entrega 2
+# Entrega 2
 # --------------------------------------------------------
 # Control de impactos, averías y hundimiento 
 # --------------------------------------------------------

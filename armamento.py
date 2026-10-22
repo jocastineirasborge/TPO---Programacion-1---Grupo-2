@@ -188,8 +188,12 @@ def descontar_municion(arsenal, arma):
     Objetivo: Descontar una unidad de munición del arma especificada
     dentro del arsenal del jugador.
     Parámetros:
+        - arsenal(dict): Diccionario con las armas disponibles.
+        - arma(str): Letra identificadora del arma a utilizar.
+    Devuelve:
+        bool: True si la munición se descontó exitosamente o hay munición
+        infinita, o False si el arma no existe o no quedan municiones.
     """
-
     if arma not in arsenal:
         return False
 
