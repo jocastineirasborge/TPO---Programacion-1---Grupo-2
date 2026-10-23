@@ -110,12 +110,12 @@ def comparar_busquedas(cubo, n=8):
 
         print(f"{nave} | {comp_lineal:3d} | {comp_optimizada:3d} | {diferencia} comparaciones menos")
 
-        ahorro_total = total_lineal - total_optimizada
-        porcentaje_ahorro = (ahorro_total / total_lineal) * 100
+    ahorro_total = total_lineal - total_optimizada
+    porcentaje_ahorro = (ahorro_total / total_lineal) * 100
 
-        print("-------------------------------------------------")
-        print(f"TOTAL: Lineal = {total_lineal} ops | Optimizada = {total_optimizada} ops")
-        print(f"¡La búsqueda optimizada redujo un {porcentaje_ahorro:.1f}% las operaciones!\n")
+    print("-------------------------------------------------")
+    print(f"TOTAL: Lineal = {total_lineal} ops | Optimizada = {total_optimizada} ops")
+    print(f"¡La búsqueda optimizada redujo un {porcentaje_ahorro:.1f}% las operaciones!\n")
 
 # --------------------------------
 # Demostración de la comparación

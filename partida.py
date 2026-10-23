@@ -691,15 +691,16 @@ def partida_vs_maquina(estado):
                 print("GANADOR: JUGADOR 1(Usted)")
             else:
                 print("GANADOR: JUGADOR 2(Máquina)")
-                print("\n========================================")
-                print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
-                print("\n========================================")
-                for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
-                    print(f"Estadísticas de {nombre_jugador}:")
-                    print(f"- Disparos realizados: {datos['disparos']}")
-                    print(f"- Impactos: {datos['impactos']} | Agua: {datos['agua']}")
-                    print(f"- Efectividad de tiro: {datos['efectividad']}")
-                    print(f"- Desglose de armas usadas: {datos['armas']}")
+                
+            print("\n========================================")
+            print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas_finales['total_turnos']}")
+            print("\n========================================")
+            for nombre_jugador, datos in estadisticas_finales["jugadores"].items():
+                print(f"Estadísticas de {nombre_jugador}:")
+                print(f"- Disparos realizados: {datos['disparos']}")
+                print(f"- Impactos: {datos['impactos']} | Agua: {datos['agua']}")
+                print(f"- Efectividad de tiro: {datos['efectividad']}")
+                print(f"- Desglose de armas usadas: {datos['armas']}")
 
 
 def menu_principal():
