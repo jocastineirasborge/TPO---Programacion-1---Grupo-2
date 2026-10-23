@@ -88,8 +88,7 @@ def pedir_tamanio_cubo():
         int: Número entero correspondiente a la arista del cubo.
     """
     while True:
-        entrada = input("Ingrese el tamaño del cubo N (entre 5 y 20, Enter para 8 por" \
-        "defecto): ").strip()
+        entrada = input("Ingrese el tamaño del cubo N (entre 5 y 20, Enter para 8 por defecto): ").strip()
         if entrada == "":
             return TAMANO_CUBO
         if entrada.isdigit():
@@ -276,14 +275,6 @@ def ejecutar_turno(estado, jugada):
 
     # Si el arma es el Sonar
     if arma == "S":
-        contactos, celdas_plano = radar.sonar_por_planos(cubo_rival, eje, valor)
-
-        for punto in celdas_plano:
-            if tablero.leer_celda(cubo_rival, punto) == tablero.NAVE_OCULTA:
-                tablero.escribir_celda(cubo_rival, punto, tablero.DETECTADO)
-
-        contactos_str = "contacto detectado" if contactos else "contactos detectados"
-        print(f"\n[SONAR] Escaneo en plano {eje} = {valor}: {contactos} {contactos_str}.")
         eje = jugada.get("eje", "z").lower()
         try:
             valor = int(jugada.get("valor", 1))
@@ -292,21 +283,16 @@ def ejecutar_turno(estado, jugada):
 
         texto_registro_objetivo = f"{eje}={valor}"
 
-        celdas_plano = armamento.obtener_celdas_afectadas("S", (eje, valor), n)
+        contactos, celdas_plano = radar.sonar_por_planos(cubo_rival, eje, valor)
 
-        contactos_detectados = 0
         for punto in celdas_plano:
-            estado_celda = tablero.leer_celda(cubo_rival, punto)
-
-            if estado_celda == tablero.NAVE_OCULTA:
-                contactos_detectados += 1
+            if tablero.leer_celda(cubo_rival, punto) == tablero.NAVE_OCULTA:
                 tablero.escribir_celda(cubo_rival, punto, tablero.DETECTADO)
 
-            elif estado_celda == tablero.DETECTADO:
-                contactos_detectados += 1
+        contactos_str = "contacto detectado" if contactos else "contactos detectados"
+        print(f"\n[SONAR] Escaneo en plano {eje} = {valor}: {contactos} {contactos_str}.")
 
-        print(f"\n[SONAR] Escaneo en plano {eje}={valor}: {contactos_detectados} contactos detectados.")
-        resultado_str = f"{contactos_detectados} contactos"
+        resultado_str = f"{contactos} contactos"
 
     #Armas ofensivas
     else:
@@ -543,10 +529,10 @@ def preparar_1v1():
     estado = nueva_partida_1v1(configuracion)
 
     print("\n--- Flota de Jugador 1 ---")
-    submenú_ubicacion(estado["jugadores"][0])
+    submenú_ubicacion(estado["jugadores"][0], n)
 
     print("\n--- Flota de Jugador 2 ---")
-    submenú_ubicacion(estado["jugadores"][1])
+    submenú_ubicacion(estado["jugadores"][1], n)
 
     return estado
 
@@ -701,7 +687,7 @@ def partida_vs_maquina(estado):
             ganador = estado["ganador"] + 1
             estadisticas_finales = registro.obtener_estadisticas_partida()
             print("¡TERMINÓ EL JUEGO!")
-            if ganador == 0:
+            if estado["ganador"] == 0:
                 print("GANADOR: JUGADOR 1(Usted)")
             else:
                 print("GANADOR: JUGADOR 2(Máquina)")

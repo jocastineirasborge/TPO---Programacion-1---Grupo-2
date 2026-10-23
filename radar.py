@@ -120,7 +120,16 @@ def comparar_busquedas(cubo, n=8):
 # --------------------------------
 # Demostración de la comparación
 # --------------------------------
+
 def demostracion_comparacion():
+    """
+    Objetivo: Crear un cubo con naves de forma auxiliar para demostrar la comparación de
+    ambos métodos de búsqueda con comparar_busquedas().
+    Parámetros:
+        Ninguno
+    Devuelve:
+        None: No devuelve nada porque es una función hecha para llamar otras funciones.
+    """
     c = tablero.crear_cubo(8)
     f = flota.ubicacion_automatica(c, n=8)
 

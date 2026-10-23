@@ -2,8 +2,15 @@
 Módulo registro.py
 Administra el historial de la partida almacenado en memoria.
 """
-#Lista correspondiente al historial de la partida en donde cada elemento será una tupla con toda la información necesaria.
+
+# ---------------------------
+# Almacenamiento en memoria
+# ---------------------------
 HISTORIAL_PARTIDA = []
+
+# -----------------------------------------
+# Funciones de inicialización y registro
+# -----------------------------------------
 
 def inicializar_registro():
     """
@@ -27,6 +34,9 @@ def registrar_turno(num_turno, jugador, arma, objetivo, resultado):
     registro = (num_turno, jugador, arma, objetivo, resultado)
     HISTORIAL_PARTIDA.append(registro)
 
+# -------------------------------------
+# Funciones de consulta al historial
+# -------------------------------------
 
 def obtener_historial():
     """
@@ -49,9 +59,18 @@ def obtener_ultimo_turno():
         return None
     return HISTORIAL_PARTIDA[-1]
 
+# ------------------------------------------
+# Funciones de cálculos de estadísticas
+# ------------------------------------------
 
 def obtener_estadisticas_jugador(jugador_num):
-
+    """
+    Objetivo: Calcula y recopila las métricas individuales de rendimiento de un jugador.
+    Parámetros: 
+        - jugador_num (str o int): Identificador o número del jugador.
+    Devuelve: 
+        dict: Diccionario con el resumen estadístico del jugador conteniendo:
+    """
     historial = obtener_historial()
 
     disparos = 0
@@ -86,7 +105,13 @@ def obtener_estadisticas_jugador(jugador_num):
 
 
 def obtener_estadisticas_partida():
-
+    """ 
+    Objetivo: Obtener el resumen global de estadísticas de la partida, consolidando las métricas individuales (disparos, impactos, efectividad y uso de armas) de todos los jugadores intervinientes. 
+    Parámetros: 
+        Ninguno. 
+    Devuelve: 
+        dict: Diccionario que contiene las estadísticas globales de la partida organizadas por jugador.
+    """
     historial = obtener_historial()
 
     return {
