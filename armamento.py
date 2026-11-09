@@ -2,7 +2,7 @@
 Módulo armamento.py
 Administra el catálogo de armas, la munición disponible y las celdas afectadas por cada disparo. 
 """
-
+import tablero
 # ---------------------------------------------
 # Catálogo de armas
 # ---------------------------------------------
@@ -50,9 +50,8 @@ def obtener_catalogo_armas():
     """
     Objetivo: Devolver la lista de catálogo de armas disponible.
     Devuelve:
-        list: Lista de tuplas con el catálogo de armas.
+        dict: Diccionario con el catálogo de armas.
     """
-    
     return CATALOGO_ARMAS
 
 # ----------------------------------
@@ -63,10 +62,10 @@ def efecto_torpedo(objetivo, n):
     """
     Objetivo: Calcular celdas afectadas por el torpedo.
     Parámetros:
-        - Objetivo(tuple): Coordenada en (z, x, y) del disparo.
-        - n(int): Tamaño del cubo para validación.
+        - objetivo (tuple): Coordenada en (z, x, y) del disparo.
+        - n (int): Tamaño de la arista del cubo.
     Devuelve:
-        List: Lista que contiene la coordenada en formato tupla del punto apuntado.
+        list: Lista que contiene la coordenada en formato tupla del punto apuntado.
     """
     z, x, y = objetivo
     if 1 <= z <= n and 1 <= x <= n and 1 <= y <= n:
@@ -77,48 +76,118 @@ def efecto_torpedo(objetivo, n):
 
 def efecto_misil_de_racimo(objetivo, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el misil de racimo.
+    Parámetros:
+        - objetivo (tuple): Coordenada central (z, x, y) del disparo.
+        - n (int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con las celdas afectadas dentro de los límites del cubo.
     """
-    pass
+    z, x, y = objetivo
+
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+
+    candidatos = [(z, x, y), (z - 1, x, y), (z + 1, x, y), (z, x - 1, y), (z, x + 1, y), (z, x, y - 1), (z, x, y + 1)]
+
+    return [p for p in candidatos if 1 <= p[0] <= n and 1 <= p[1] <= n and 1 <= p[2] <= n]
 
 
 def efecto_carga(objetivo, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el disparo de la carga.
+    Parámetros:
+        - objetivo (tuple): Coordenada central (z, x, y) del disparo.
+        - n (int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con las celdas afectadas dentro de los límites del cubo.
     """
-    pass
+    z, x, y = objetivo
+
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+
+    return [(i, x, y) for i in range(1, n + 1)]
 
 
-def efecto_barrido(objetivo, n):
+def efecto_barrido(datos_laser, n):
     """
-    Para la entrega 2.
+    Objetivo: Calcula la lista de celdas afectadas por el disparo del barrido láser.
+    Parámetros:
+        - datos_laser (tuple): Tupla que contiene la coordenada central y el eje de barrido.
+        - n (int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas correspondiente a las N celdas del largo del eje elegido.
     """
-    pass
+    objetivo, eje = datos_laser
+    z, x, y = objetivo
 
+    if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n) or eje not in ("x", "y"):
+        return []
 
-def efecto_sonar(objetivo, n):
+    if eje == "x":
+        return [(z, i, y) for i in range(1, n + 1)]
+    else:
+        return [(z, x, i) for i in range(1, n + 1)]
+    
+
+def efecto_sonar(datos_sonar, n):
     """
-    Para la entrega 2.
+    Objetivo: Obtener la lista de celdas pertenecientes al plano para el escaneo del sonar.
+    Parámetros:
+        - datos_sonar (tuple): Tupla indicando el eje del plano y el número de capa o corte.
+        - n (int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista de tuplas con las N*N celdas pertenecientes al plano solicitado.
     """
-    pass
+    eje, valor = datos_sonar
+    return tablero.puntos_de_plano(tablero.crear_cubo(n), eje, valor)
 
 
 def efecto_onda(objetivo, n):
     """
-    Para la entrega 3.
+    Objetivo: Simular el efecto de onda expansiva afectando la celda y sus vecinas inmediatas.
+    Parámetros:
+        - objetivo (tuple): Coordenada (z, x, y).
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        list: Lista de tuplas afectadas.
     """
-    pass
+    z, x, y = objetivo
+    if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+    
+    afectados = []
+    for dz in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                nz, nx, ny = z + dz, x + dx, y + dy
+                if 1 <= nz <= n and 1 <= nx <= n and 1 <= ny <= n:
+                    afectados.append((nz, nx, ny))
+    return afectados
 
 
 def efecto_torpedo_guiado(objetivo, n):
     """
-    Para la entrega 3.
+    Objetivo: Simular el torpedo guiado afectando al objetivo y su vecino ortogonal superior en z.
+    Parámetros:
+        - objetivo (tuple): Coordenada (z, x, y).
+        - n (int): Tamaño del cubo.
+    Devuelve:
+        list: Lista de tuplas afectadas.
     """
-    pass
+    z, x, y = objetivo
+    if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+    
+    afectados = [objetivo]
+    if z + 1 <= n:
+        afectados.append((z + 1, x, y))
+    return afectados
 
 
 # -----------------------------------------------------------------------------------
-# Diccionario de despacho de armas, ubicado una vez definida cada función de efecto
+# Diccionario de despacho de armas
 # -----------------------------------------------------------------------------------
 
 DESPACHO_ARMAS = {
@@ -132,27 +201,48 @@ DESPACHO_ARMAS = {
 }
 
 
+# -----------------------
+# Descontar munición
+# -----------------------
+
+def descontar_municion(arsenal, arma):
+    """
+    Objetivo: Descontar una unidad de munición del arma especificada dentro del arsenal del jugador.
+    Parámetros:
+        - arsenal (dict): Diccionario con las armas disponibles.
+        - arma (str): Letra identificadora del arma a utilizar.
+    Devuelve:
+        bool: True si la munición se descontó exitosamente o hay munición infinita, o False en caso contrario.
+    """
+    if arma not in arsenal:
+        return False
+
+    cant = arsenal[arma]
+    if cant is None:
+        return True
+    if cant > 0:
+        arsenal[arma] -= 1
+        return True
+
+    return False
+
+
 # ----------------------------------
-# Funcion principal de ejecución
+# Función principal de ejecución
 # ----------------------------------
 
 def obtener_celdas_afectadas(arma, objetivo, n):
     """
     Objetivo: Determinar la celda impactada según el arma.
     Parámetros:
-        - Arma(str): Identificador del arma.
-        - Objetivo(tuple): Coordenada en (z, y, x) del disparo.
-        - n(int): Tamaño del cubo.
+        - arma (str): Identificador del arma.
+        - objetivo (tuple o tupla/tupla): Coordenada o parámetros adicionales.
+        - n (int): Tamaño del cubo.
     Devuelve:
         list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
     """
-
     if arma in CATALOGO_ARMAS:
         funcion_elegida = DESPACHO_ARMAS[arma]
-
-        celdas = funcion_elegida(objetivo, n)
-
-        return celdas
+        return funcion_elegida(objetivo, n)
     
     return []
-
