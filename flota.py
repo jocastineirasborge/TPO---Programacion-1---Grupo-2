@@ -391,3 +391,41 @@ def revelar_celda_rival(flota, cubo):
         return random.choice(celdas_candidatas)
 
     return None
+
+
+# Entrega 3
+# --------------------------------------------------------
+# Datos de la flota para guardar y reponer la partida
+# --------------------------------------------------------
+
+def flota_a_serializable(flota):
+    """
+    Objetivo: Convertir la estructura de la flota en un formato compatible con JSON 
+    (transformando tuplas de puntos en listas y llaves de diccionarios de impactos).
+    Parámetros:
+        - flota (list): Lista con el estado de las naves ubicadas.
+    Devuelve:
+        list: Estructura serializable lista para ser guardada en JSON.
+    """
+    flota_serializada = []
+    for nave, puntos, impactos in flota:
+        puntos_lista = [list(p) for p in puntos]
+        impactos_lista = [[list(p), cant] for p, cant in impactos.items()]
+        flota_serializada.append([nave, puntos_lista, impactos_lista])
+    return flota_serializada
+
+
+def flota_desde_serializable(flota_serializada):
+    """
+    Objetivo: Reconstruir la estructura interna de la flota a partir de los datos cargados de un JSON.
+    Parámetros:
+        - flota_serializada (list): Datos de la flota obtenidos desde el archivo JSON.
+    Devuelve:
+        list: Lista de la flota con tuplas y diccionarios originales restaurados.
+    """
+    flota_reconstruida = []
+    for nave, puntos_lista, impactos_lista in flota_serializada:
+        puntos = [tuple(p) for p in puntos_lista]
+        impactos = {tuple(p[0]): p[1] for p in impactos_lista}
+        flota_reconstruida.append((nave, puntos, impactos))
+    return flota_reconstruida
