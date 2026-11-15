@@ -505,6 +505,96 @@ def vista_rival(cubo):
 
 
 # ------------------------------------------------------------------
+# Recorridos alternativos del cubo
+# ------------------------------------------------------------------
+# Cada recorrido devuelve la lista de TODOS los puntos (z, x, y) del cubo,
+# en el orden en que se visitan. Ningun recorrido modifica el cubo.
+
+def recorrido_por_capas(cubo, eje="z"):
+    """
+    Objetivo: recorrer el cubo plano por plano, fijando un eje de 1 a N.
+    Parametros: cubo y eje ("z", "x" o "y") que se fija en cada plano.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita,
+        o lista vacia si el eje no es valido.
+    Excepciones: ninguna.
+    """
+    if eje not in EJES:
+        return []
+    recorrido = []
+    for valor in range(1, len(cubo) + 1):
+        plano = puntos_de_plano(cubo, eje, valor)
+        for i in range(0, len(plano)):
+            recorrido.append(plano[i])
+    return recorrido
+
+
+def recorrido_capas_z(cubo):
+    """
+    Objetivo: recorrer el cubo por capas de z (z = 1, luego z = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "z")
+
+
+def recorrido_cortes_x(cubo):
+    """
+    Objetivo: recorrer el cubo por cortes de x (x = 1, luego x = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "x")
+
+
+def recorrido_cortes_y(cubo):
+    """
+    Objetivo: recorrer el cubo por cortes de y (y = 1, luego y = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "y")
+
+
+def rango_en_sentido(n, ascendente):
+    """
+    Objetivo: obtener los valores de 1 a N en el sentido pedido.
+    Parametros: n (int) y ascendente (bool).
+    Salida: lista [1, 2, ..., n] si ascendente es True; [n, ..., 2, 1] si no.
+    Excepciones: ninguna.
+    """
+    if ascendente:
+        return list(range(1, n + 1))
+    return list(range(n, 0, -1))
+
+
+def recorrido_serpiente(cubo):
+    """
+    Objetivo: recorrer el cubo en zig-zag (serpiente), de forma que cada celda
+        visitada sea vecina ortogonal de la anterior.
+        - Dentro de una fila, y alterna su sentido en cada fila nueva.
+        - Dentro de una capa, x alterna su sentido en cada capa nueva.
+        Asi, al terminar una fila (o una capa) se pasa a la contigua sin saltar.
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    recorrido = []
+    filas_recorridas = 0
+    for z in range(1, n + 1):
+        valores_x = rango_en_sentido(n, z % 2 == 1)
+        for i in range(0, len(valores_x)):
+            valores_y = rango_en_sentido(n, filas_recorridas % 2 == 0)
+            for j in range(0, len(valores_y)):
+                recorrido.append((z, valores_x[i], valores_y[j]))
+            filas_recorridas = filas_recorridas + 1
+    return recorrido
+
+
+# ------------------------------------------------------------------
 # Dibujo
 # ------------------------------------------------------------------
 
