@@ -5,6 +5,9 @@ Responsabilidad (Entrega 1): crear el cubo, validar puntos, leer y escribir
 celdas, operaciones de matrices y dibujo de una capa de z.
 Responsabilidad (Entrega 2): planos (cortes) fijando x y fijando y, puntos de
 un plano o de una recta, y vecinos de una celda.
+Responsabilidad (Entrega 3): recorridos alternativos del cubo (por capas, en
+serpiente, en espiral y por octantes), despacho de recorridos con un
+diccionario y dibujo del orden de visita.
 Este modulo NO usa print ni input: recibe datos y devuelve datos.
 
 Convenciones del cubo (contrato con el resto de los modulos):
@@ -726,6 +729,59 @@ def recorrido_por_octantes(cubo):
 
 
 # ------------------------------------------------------------------
+# Despacho de recorridos
+# ------------------------------------------------------------------
+# La seleccion del recorrido se resuelve con un diccionario nombre -> funcion
+# (la consigna no permite una cadena de if / elif para este despacho).
+# Todas las funciones reciben el cubo y devuelven la lista de puntos visitados.
+# radar.py puede sumar sus recorridos recursivos con la misma forma.
+
+RECORRIDOS = {
+    "capas_z": recorrido_capas_z,
+    "cortes_x": recorrido_cortes_x,
+    "cortes_y": recorrido_cortes_y,
+    "serpiente": recorrido_serpiente,
+    "espiral": recorrido_espiral,
+    "octantes": recorrido_por_octantes,
+}
+
+NOMBRES_RECORRIDOS = {
+    "capas_z": "Por capas de z",
+    "cortes_x": "Por cortes de x",
+    "cortes_y": "Por cortes de y",
+    "serpiente": "En serpiente (zig-zag)",
+    "espiral": "En espiral por capas",
+    "octantes": "Por octantes",
+}
+
+
+def listar_recorridos():
+    """
+    Objetivo: listar los recorridos disponibles (util para armar el menu).
+    Parametros: ninguno.
+    Salida: lista de tuplas (clave, nombre legible), en el orden de RECORRIDOS.
+    Excepciones: ninguna.
+    """
+    opciones = []
+    for clave in RECORRIDOS:
+        opciones.append((clave, NOMBRES_RECORRIDOS[clave]))
+    return opciones
+
+
+def recorrer(cubo, nombre):
+    """
+    Objetivo: ejecutar un recorrido del cubo elegido por su nombre.
+    Parametros: cubo y nombre (str), una de las claves de RECORRIDOS.
+    Salida: lista de puntos (z, x, y) en orden de visita,
+        o lista vacia si el nombre no existe.
+    Excepciones: ninguna.
+    """
+    if nombre not in RECORRIDOS:
+        return []
+    return RECORRIDOS[nombre](cubo)
+
+
+# ------------------------------------------------------------------
 # Dibujo
 # ------------------------------------------------------------------
 
@@ -861,3 +917,44 @@ def dibujar_cubo(cubo, mostrar_naves=True):
         bloques.append(dibujar_capa(cubo, z, mostrar_naves, False))
     bloques.append(texto_referencias(mostrar_naves))
     return "\n\n".join(bloques)
+
+
+def dibujar_orden_recorrido(cubo, recorrido, z):
+    """
+    Objetivo: armar el dibujo de una capa z mostrando en cada celda en que
+        posicion del recorrido fue visitada (filas y, columnas x, como dibujar_capa).
+    Parametros: cubo, recorrido (lista de puntos z, x, y, por ejemplo la que
+        devuelve recorrer) y z (int entre 1 y N).
+        Las celdas de la capa que no estan en el recorrido se dibujan con ".".
+    Salida: cadena lista para imprimir, o None si z no es valido.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    if type(z) != int or z < 1 or z > n:
+        return None
+    # orden[y][x]: posicion (desde 1) en que se visito la celda, o None
+    orden = []
+    for fila in range(0, n):
+        orden.append([None] * n)
+    for i in range(0, len(recorrido)):
+        punto = recorrido[i]
+        if es_punto_valido(cubo, punto) and punto[0] == z:
+            orden[punto[2] - 1][punto[1] - 1] = i + 1
+
+    ancho = max(len(str(len(recorrido))), len("y" + str(n))) + 1
+    lineas = []
+    lineas.append(f"===== ORDEN DE VISITA - CAPA z = {z} =====")
+    encabezado = completar("", ancho)
+    for x in range(1, n + 1):
+        encabezado = encabezado + completar("x" + str(x), ancho)
+    lineas.append(encabezado.rstrip())
+    for y in range(1, n + 1):
+        linea = completar("y" + str(y), ancho)
+        for x in range(1, n + 1):
+            valor = orden[y - 1][x - 1]
+            if valor is None:
+                linea = linea + completar(".", ancho)
+            else:
+                linea = linea + completar(str(valor), ancho)
+        lineas.append(linea.rstrip())
+    return "\n".join(lineas)
