@@ -1,11 +1,20 @@
 """
 Módulo flota.py
-Administra el catálogo de naves, reglas de ubicación, la colocación manual y automática dentro del cubo,
-y el registro de impactos, naves averiadas y hundidas (Entrega 2).
+Administra el catálogo de naves, reglas de ubicación, la colocación manual y automática dentro del cubo, 
+el registro de impactos, naves averiadas y hundidas, y los datos de la flota para guardar y reponer la partida .
 """
 
 import random
 import tablero
+
+# ------------------------------------
+# Excepciones propias
+# ------------------------------------
+
+class ErrorFlota(Exception):
+    """Excepción base para errores en la ubicación, gestión o reposición de la flota."""
+    pass
+
 
 # ------------------------------------
 # Catálogo y estructuras globales
@@ -34,13 +43,21 @@ def inicializar_flota():
         Ninguno.
     Devuelve:
         None.
+    Excepciones:
+        Ninguna.
     """
     FLOTA_UBICADA.clear()
 
 
 def obtener_catalogo_naves():
     """
-    Objetivo: Devolver la lista del catálogo de naves disponible.
+    Objetivo: Devolver el catálogo de naves disponible.
+    Parámetros:
+        Ninguno.
+    Devuelve:
+        dict: Diccionario con el catálogo de naves.
+    Excepciones:
+        Ninguna.
     """
     return CATALOGO_NAVES
 
@@ -53,6 +70,8 @@ def obtener_puntos_tramo(desde, hasta):
         - hasta (tuple): Coordenada final (z, x, y).
     Devuelve:
         list: Lista de tuplas con los puntos intermedios, o [] si cambia en más de un eje.
+    Excepciones:
+        Ninguna.
     """
     z1, x1, y1 = desde
     z2, x2, y2 = hasta
@@ -101,6 +120,8 @@ def validar_reglas_ubicacion(nave_letra, puntos, n):
         - n (int): Tamaño del cubo.
     Devuelve:
         bool: True si cumple las reglas, False en caso contrario.
+    Excepciones:
+        Ninguna.
     """
     if not puntos:
         return False
@@ -145,6 +166,8 @@ def hay_distancia_segura(cubo, puntos, n):
         - n (int): Tamaño del cubo.
     Devuelve:
         bool: True si hay distancia segura, False si hay una nave colindante.
+    Excepciones:
+        Ninguna.
     """
     for z, x, y in puntos:
         for dz in (-1, 0, 1):
@@ -175,10 +198,10 @@ def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
     Devuelve:
         tuple: (cubo, flota) actualizados.
     Excepciones:
-        Lanza ValueError si alguna regla de ubicación es violada.
+        ErrorFlota: Si alguna regla de ubicación es violada o los datos son inválidos.
     """
     if nave not in CATALOGO_NAVES:
-        raise ValueError(f"Tipo de nave no reconocido: {nave}")
+        raise ErrorFlota(f"Tipo de nave no reconocido: {nave}")
 
     celdas_requeridas = CATALOGO_NAVES[nave]["celdas"]
 
@@ -192,28 +215,31 @@ def ubicar_nave(cubo, flota, nave, punto_desde, punto_hasta, n=8):
                     puntos.append((z, x, y))
 
         if len(puntos) != 8:
-            raise ValueError("La estación orbital debe formar un bloque de 2x2x2.")
+            raise ErrorFlota("La estación orbital debe formar un bloque de 2x2x2.")
     else:
         puntos = obtener_puntos_tramo(punto_desde, punto_hasta)
         if len(puntos) != celdas_requeridas:
-            raise ValueError("La cantidad de celdas no coincide con la longitud de la nave.")
+            raise ErrorFlota("La cantidad de celdas no coincide con la longitud de la nave.")
 
     if not validar_reglas_ubicacion(nave, puntos, n):
-        raise ValueError("La nave no cumple con las reglas de posición o límites del cubo.")
+        raise ErrorFlota("La nave no cumple con las reglas de posición o límites del cubo.")
 
     # Validar que las celdas estén libres
     for p in puntos:
         if tablero.leer_celda(cubo, p) != tablero.SIN_EXPLORAR:
-            raise ValueError("Hay una celda ocupada por otra nave.")
+            raise ErrorFlota("Hay una celda ocupada por otra nave.")
 
     if not hay_distancia_segura(cubo, puntos, n):
-        raise ValueError("No se respeta la distancia de seguridad (1 celda libre alrededor).")
+        raise ErrorFlota("No se respeta la distancia de seguridad (1 celda libre alrededor).")
 
     for p in puntos:
         tablero.escribir_celda(cubo, p, tablero.NAVE_OCULTA)
 
     # Registro de impactos por celda
-    impactos_iniciales = {p: 0 for p in puntos}
+    impactos_iniciales = {}
+    for p in puntos:
+        impactos_iniciales[p] = 0
+
     flota.append((nave, puntos, impactos_iniciales))
     return cubo, flota
 
@@ -228,6 +254,8 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
         - n (int): Tamaño del cubo.
     Devuelve:
         list: Lista de la flota ubicada.
+    Excepciones:
+        Ninguna.
     """
     if catalogo is None:
         catalogo = CATALOGO_NAVES
@@ -240,7 +268,7 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
         celdas = datos["celdas"]
         cantidad = datos["cantidad"]
 
-        for _ in range(cantidad):
+        for i in range(cantidad):
             colocada = False
             intentos = 0
             while not colocada and intentos < 2000:
@@ -268,9 +296,10 @@ def ubicacion_automatica(cubo, catalogo=None, semilla=None, n=8):
                 try:
                     ubicar_nave(cubo, flota, letra, desde, hasta, n)
                     colocada = True
-                except ValueError:
+                except ErrorFlota:
                     pass
     return flota
+
 
 # Entrega 2
 # --------------------------------------------------------
@@ -286,6 +315,8 @@ def nave_hundida(nave_letra, puntos, impactos):
         - impactos (dict): Mapa del contador de impactos por celda.
     Devuelve:
         bool: True si la nave está hundida, False en caso contrario.
+    Excepciones:
+        Ninguna.
     """
     # Averiguamos cuántos disparos requiere cada celda
     if nave_letra == "P":
@@ -317,6 +348,8 @@ def registrar_impacto(flota, punto, arma_usada="T"):
     Devuelve:
         tuple: (impacto_valido, nave_letra, estado)
                estado puede ser "averiada", "hundida", "inmune" o None.
+    Excepciones:
+        Ninguna.
     """
     for nave in flota:
         letra = nave[0]
@@ -353,6 +386,8 @@ def flota_hundida(flota):
         - flota (list): Lista con el estado de las naves de la partida.
     Devuelve:
         bool: True si todas las naves están hundidas, False en caso contrario.
+    Excepciones:
+        Ninguna.
     """
     if len(flota) == 0:
         return False
@@ -376,6 +411,8 @@ def revelar_celda_rival(flota, cubo):
         - cubo (list): Matriz 3D del tablero rival.
     Devuelve:
         tuple o None: Coordenada (z, x, y) de la celda revelada, o None si no hay celdas para revelar.
+    Excepciones:
+        Ninguna.
     """
     celdas_candidatas = []
 
@@ -398,34 +435,128 @@ def revelar_celda_rival(flota, cubo):
 # Datos de la flota para guardar y reponer la partida
 # --------------------------------------------------------
 
-def flota_a_serializable(flota):
+def exportar_flota(flota):
     """
-    Objetivo: Convertir la estructura de la flota en un formato compatible con JSON 
-    (transformando tuplas de puntos en listas y llaves de diccionarios de impactos).
+    Objetivo: Preparar los datos de la flota en diccionarios y listas simples para guardar en JSON.
     Parámetros:
-        - flota (list): Lista con el estado de las naves ubicadas.
+        - flota (list): Lista de naves ubicadas [(letra, puntos, impactos), ...].
     Devuelve:
-        list: Estructura serializable lista para ser guardada en JSON.
+        list: Lista de diccionarios con los datos de cada nave listos para JSON.
+    Excepciones:
+        ErrorFlota: Si la estructura de la flota recibida no es válida.
     """
-    flota_serializada = []
-    for nave, puntos, impactos in flota:
-        puntos_lista = [list(p) for p in puntos]
-        impactos_lista = [[list(p), cant] for p, cant in impactos.items()]
-        flota_serializada.append([nave, puntos_lista, impactos_lista])
-    return flota_serializada
+    if type(flota) != list:
+        raise ErrorFlota("La flota debe ser una lista.")
+
+    datos_guardados = []
+    try:
+        for nave in flota:
+            letra = nave[0]
+            puntos = nave[1]
+            impactos = nave[2]
+
+            if letra not in CATALOGO_NAVES:
+                raise ErrorFlota(f"Nave no reconocida al exportar: {letra}")
+
+            puntos_simples = []
+            impactos_simples = {}
+
+            for p in puntos:
+                clave_texto = f"{p[0]},{p[1]},{p[2]}"
+                puntos_simples.append([p[0], p[1], p[2]])
+                impactos_simples[clave_texto] = impactos.get(p, 0)
+
+            datos_guardados.append({
+                "letra": letra,
+                "puntos": puntos_simples,
+                "impactos": impactos_simples
+            })
+    except ErrorFlota:
+        raise
+    except (TypeError, IndexError, AttributeError) as error:
+        raise ErrorFlota(f"Error al preparar los datos de la flota para guardar: {error}")
+    else:
+        return datos_guardados
 
 
-def flota_desde_serializable(flota_serializada):
+def importar_flota(datos_guardados, n=8):
     """
-    Objetivo: Reconstruir la estructura interna de la flota a partir de los datos cargados de un JSON.
+    Objetivo: Reconstruir la estructura de la flota a partir de los datos leídos del JSON.
     Parámetros:
-        - flota_serializada (list): Datos de la flota obtenidos desde el archivo JSON.
+        - datos_guardados (list): Lista de diccionarios recuperados del archivo JSON.
+        - n (int): Tamaño del cubo para validar los límites de las coordenadas (por defecto 8).
     Devuelve:
-        list: Lista de la flota con tuplas y diccionarios originales restaurados.
+        list: Lista de la flota reconstruida en su formato original [(letra, puntos, impactos), ...].
+    Excepciones:
+        ErrorFlota: Si los datos guardados están corruptos, incompletos o fuera de rango.
     """
-    flota_reconstruida = []
-    for nave, puntos_lista, impactos_lista in flota_serializada:
-        puntos = [tuple(p) for p in puntos_lista]
-        impactos = {tuple(p[0]): p[1] for p in impactos_lista}
-        flota_reconstruida.append((nave, puntos, impactos))
-    return flota_reconstruida
+    if type(datos_guardados) != list:
+        raise ErrorFlota("Los datos de la flota guardada deben ser una lista.")
+
+    flota_repuesta = []
+    try:
+        for item in datos_guardados:
+            letra = item["letra"]
+            if letra not in CATALOGO_NAVES:
+                raise ErrorFlota(f"Nave no reconocida en partida guardada: {letra}")
+
+            puntos = []
+            impactos = {}
+
+            for coords in item["puntos"]:
+                if type(coords) != list or len(coords) != 3:
+                    raise ErrorFlota("Coordenada inválida en archivo guardado.")
+
+                z, x, y = coords[0], coords[1], coords[2]
+                if type(z) != int or type(x) != int or type(y) != int:
+                    raise ErrorFlota("Las coordenadas deben ser números enteros.")
+                if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+                    raise ErrorFlota("Coordenada fuera de los límites del cubo.")
+
+                punto = (z, x, y)
+                puntos.append(punto)
+
+                clave_texto = f"{z},{x},{y}"
+                cant = item["impactos"].get(clave_texto, 0)
+                if type(cant) != int or cant < 0:
+                    raise ErrorFlota("Cantidad de impactos inválida en archivo guardado.")
+                impactos[punto] = cant
+
+            flota_repuesta.append((letra, puntos, impactos))
+    except ErrorFlota:
+        raise
+    except (KeyError, TypeError, IndexError, AttributeError) as error:
+        raise ErrorFlota(f"Error al reponer los datos de la flota: {error}")
+    else:
+        return flota_repuesta
+
+
+def reponer_flota_en_cubo(cubo, flota):
+    """
+    Objetivo: Sincronizar el estado visual del cubo a partir de una flota repuesta desde archivo.
+    Parámetros:
+        - cubo (list): Matriz 3D del tablero de juego.
+        - flota (list): Lista de la flota reconstruida.
+    Devuelve:
+        list: El cubo actualizado con los estados correspondientes de cada nave.
+    Excepciones:
+        ErrorFlota: Si algún punto de la flota no es válido dentro del cubo recibido.
+    """
+    for nave in flota:
+        letra = nave[0]
+        puntos = nave[1]
+        impactos = nave[2]
+        hundida = nave_hundida(letra, puntos, impactos)
+
+        for p in puntos:
+            if not tablero.es_punto_valido(cubo, p):
+                raise ErrorFlota(f"Punto fuera de rango al reponer el cubo: {p}")
+
+            if hundida:
+                tablero.escribir_celda(cubo, p, tablero.HUNDIDO)
+            elif impactos.get(p, 0) > 0:
+                tablero.escribir_celda(cubo, p, tablero.IMPACTO)
+            else:
+                tablero.escribir_celda(cubo, p, tablero.NAVE_OCULTA)
+
+    return cubo
