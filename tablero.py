@@ -594,6 +594,137 @@ def recorrido_serpiente(cubo):
     return recorrido
 
 
+def espiral_de_capa(cubo, z):
+    """
+    Objetivo: recorrer una capa z en espiral, desde el borde hacia el centro
+        y en sentido horario (avanza en y, baja en x, retrocede en y, sube en x).
+    Parametros: cubo y z (int entre 1 y N).
+    Salida: lista de N * N puntos (z, x, y) en orden de visita,
+        o lista vacia si z no es valido.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    if type(z) != int or z < 1 or z > n:
+        return []
+    recorrido = []
+    arriba = 1
+    abajo = n
+    izquierda = 1
+    derecha = n
+    while arriba <= abajo and izquierda <= derecha:
+        # Borde superior: fila x = arriba, de izquierda a derecha
+        for y in range(izquierda, derecha + 1):
+            recorrido.append((z, arriba, y))
+        # Borde derecho: columna y = derecha, hacia abajo
+        for x in range(arriba + 1, abajo + 1):
+            recorrido.append((z, x, derecha))
+        # Borde inferior: fila x = abajo, de derecha a izquierda (si quedan filas)
+        if arriba < abajo:
+            for y in range(derecha - 1, izquierda - 1, -1):
+                recorrido.append((z, abajo, y))
+        # Borde izquierdo: columna y = izquierda, hacia arriba (si quedan columnas)
+        if izquierda < derecha:
+            for x in range(abajo - 1, arriba, -1):
+                recorrido.append((z, x, izquierda))
+        arriba = arriba + 1
+        abajo = abajo - 1
+        izquierda = izquierda + 1
+        derecha = derecha - 1
+    return recorrido
+
+
+def recorrido_espiral(cubo):
+    """
+    Objetivo: recorrer el cubo capa por capa de z, cada capa en espiral
+        desde el borde hacia el centro.
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    recorrido = []
+    for z in range(1, len(cubo) + 1):
+        capa = espiral_de_capa(cubo, z)
+        for i in range(0, len(capa)):
+            recorrido.append(capa[i])
+    return recorrido
+
+
+# Octantes: el cubo se parte a la mitad en cada eje y quedan 8 sub-cubos.
+# La mitad inferior de un eje va de 1 a N // 2 y la superior de N // 2 + 1 a N
+# (el mismo corte que usa flota.py para submarino y portaaviones).
+# Numeracion: octante = 1 + 4 * mitad_z + 2 * mitad_x + mitad_y,
+# con mitad = 0 (inferior) o 1 (superior). El octante 1 contiene (1, 1, 1)
+# y el octante 8 contiene (N, N, N).
+CANTIDAD_OCTANTES = 8
+
+
+def mitades_de_eje(n):
+    """
+    Objetivo: obtener los limites de las dos mitades de un eje.
+    Parametros: n (int) tamanio del eje.
+    Salida: lista [(1, n // 2), (n // 2 + 1, n)] con los limites (inclusive)
+        de la mitad inferior y de la superior.
+    Excepciones: ninguna.
+    """
+    mitad = n // 2
+    return [(1, mitad), (mitad + 1, n)]
+
+
+def octante_de(cubo, punto):
+    """
+    Objetivo: informar a que octante pertenece un punto.
+    Parametros: cubo y punto (tupla z, x, y).
+    Salida: numero de octante (int de 1 a 8), o None si el punto no es valido.
+    Excepciones: ninguna.
+    """
+    if not es_punto_valido(cubo, punto):
+        return None
+    mitad = len(cubo) // 2
+    z, x, y = punto
+    mitad_z = int(z > mitad)
+    mitad_x = int(x > mitad)
+    mitad_y = int(y > mitad)
+    return 1 + 4 * mitad_z + 2 * mitad_x + mitad_y
+
+
+def puntos_de_octante(cubo, numero):
+    """
+    Objetivo: listar los puntos de un octante del cubo.
+    Parametros: cubo y numero de octante (int de 1 a 8).
+    Salida: lista de puntos (z, x, y) recorridos por capas de z dentro del octante,
+        o lista vacia si el numero no es valido.
+    Excepciones: ninguna.
+    """
+    if type(numero) != int or numero < 1 or numero > CANTIDAD_OCTANTES:
+        return []
+    mitades = mitades_de_eje(len(cubo))
+    indice = numero - 1
+    desde_z, hasta_z = mitades[indice // 4]
+    desde_x, hasta_x = mitades[(indice // 2) % 2]
+    desde_y, hasta_y = mitades[indice % 2]
+    puntos = []
+    for z in range(desde_z, hasta_z + 1):
+        for x in range(desde_x, hasta_x + 1):
+            for y in range(desde_y, hasta_y + 1):
+                puntos.append((z, x, y))
+    return puntos
+
+
+def recorrido_por_octantes(cubo):
+    """
+    Objetivo: recorrer el cubo octante por octante (del 1 al 8).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    recorrido = []
+    for numero in range(1, CANTIDAD_OCTANTES + 1):
+        octante = puntos_de_octante(cubo, numero)
+        for i in range(0, len(octante)):
+            recorrido.append(octante[i])
+    return recorrido
+
+
 # ------------------------------------------------------------------
 # Dibujo
 # ------------------------------------------------------------------
