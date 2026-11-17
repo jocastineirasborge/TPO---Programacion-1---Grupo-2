@@ -782,9 +782,10 @@ def menu_principal():
                 print("Programa finalizado.")
                 break
 
-        else:
-            print("Opción inválida")
-
-
+            else:
+                print("Opción inválida")
+        except ErrorPartida as error:
+            print(f"Error en la partida : {error}")
+        
 #Ejecución de programa principal
 menu_principal()
