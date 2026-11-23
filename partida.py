@@ -2,8 +2,8 @@
 """
 Módulo partida.py
 
-Integrador de Operación Cubo. Administra la creación de partidas,
-los turnos, los modos de juego y la interfaz por consola.
+Integrador principal del juego 'Operación Cubo'. Maneja la creación del estado de las partidas, el bucle de turnos,
+la interfaz de consola, la validación de entrada, modos de juego (1v1, vs Máquina, Máquina vs Máquina) y menús.
 """
 
 import random
@@ -11,30 +11,41 @@ import re
 import tablero
 import flota
 import registro
-from armamento import obtener_catalogo_armas, obtener_celdas_afectadas
+import armamento
+import radar
 
 
 class ErrorPartida(Exception):
     """Excepción base para errores controlados del módulo partida."""
+    pass
 
 
 class ErrorJugada(ErrorPartida):
     """Se utiliza cuando una jugada no es válida."""
+    pass
 
 
 class ErrorGuardado(ErrorPartida):
     """Se utiliza cuando no se puede guardar o recuperar una partida."""
+    pass
 
 
-TAMANO_CUBO = 8
 DIFICULTADES = ("facil", "dificil")
 PATRON_NOMBRE = r"^[A-Za-z0-9_-]{1,30}$"
 
+# -----------------------------------------
+# Funciones auxiliares e Inicialización
+# -----------------------------------------
 
 def crear_jugador(n):
-    """Crea el estado inicial de un jugador."""
+    """
+    Objetivo: Crear y estructurar diccionario con el estado inicial del jugador.
+    Parámetros:
+        n(int): Tamaño de la dimensión del cubo(N x N x N).
+    Devuelve:
+        dict: Diccionario con la estructura básica del jugador.
+    """
     cubo = tablero.crear_cubo(n)
-
     if cubo is None:
         raise ErrorPartida("El tamaño del cubo no es válido.")
 
@@ -42,74 +53,207 @@ def crear_jugador(n):
         "cubo": cubo,
         "flota": [],
         "disparos": [],
-        "municion": _municion_inicial()
+        "municion": municion_inicial()
     }
 
 
-def _municion_inicial():
-    """Obtiene la munición inicial de cada arma."""
-    catalogo = obtener_catalogo_armas()
+def municion_inicial():
+    """ 
+    Objetivo: Generar y obtener el diccionario con la cantidad inicial de munición asignada
+    a cada arma a partir del catálogo disponible.
+    Devuelve: 
+        dict: Diccionario {letra_arma: cantidad} con el stock inicial 
+        de cada arma (donde None representa munición ilimitada). 
+    """
+    catalogo = armamento.obtener_catalogo_armas()
 
-    return {
-        letra: datos.get("municion")
-        for letra, datos in catalogo.items()
-    }
+    return {letra: datos.get("municion") for letra, datos in catalogo.items()}
 
 
 def formatear_pendientes(pendientes):
-    """Muestra las naves que todavía deben ubicarse."""
+    """
+    Objetivo: Convertir la lista de naves pendientes de ubicación a una cadena
+    de texto formateada de este tipo.
+    (ej. 'F x3 D x2 S x2 C x1 P x1 E x1')
+    Parámetros:
+        - pendientes(list): Lista con las letras identificadoras de cada nave disponible.
+    Devuelve:
+        str: Cadena de texto formada con los tipos de naves y cantidades disponibles.
+    """
     partes = []
 
-    for letra in ("F", "D", "S", "C", "P", "E"):
-        cantidad = pendientes.count(letra)
+    for nave in ("F", "D", "S", "C", "P", "E"):
+        cantidad = pendientes.count(nave)
 
-        if cantidad:
-            partes.append(f"{letra} x{cantidad}")
+        if cantidad > 0:
+            partes.append(f"{nave} x{cantidad}")
 
     return "   ".join(partes)
 
 
-def colocar_flota_automatica(jugador, n=8, semilla=None):
-    """Coloca automáticamente la flota de un jugador."""
-    jugador["flota"] = flota.ubicacion_automatica(
-        jugador["cubo"],
-        semilla=semilla,
-        n=n
-    )
-
+def colocar_flota_automatica(jugador, n=tablero.N_POR_DEFECTO, semilla=None):
+    """
+    Objetivo: Delega la colocación aleatoria a flota.py y actualiza la flota del jugador.
+    Parámetros:
+        - jugador(dict): Información del jugador actual.
+        - n(int): Tamaño de la dimensión del cubo(valor por defecto 8).
+    Devuelve:
+        None: Modifica de forma directa el diccionario.
+    """
+    jugador["flota"] = flota.ubicacion_automatica(jugador["cubo"], semilla=semilla, n=n)
     if not jugador["flota"]:
         raise ErrorPartida("No se pudo ubicar la flota automáticamente.")
 
     return jugador
 
 
+def pedir_tamanio_cubo():
+    """
+    Objetivo: Solicita al usuario el tamaño del arista del cubo (entre 5 y 20).
+    Devuelve:
+        int: Tamaño N configurado.
+    """
+    while True:
+        entrada = input(f"Ingrese el tamaño del cubo N (entre 5 y 20, Enter para {tablero.N_POR_DEFECTO} por defecto): ").strip()
+
+        if entrada == "":
+            return tablero.N_POR_DEFECTO
+        
+        if entrada.isdigit():
+            n = int(entrada)
+
+        if 5 <= n <= 20:
+            return n
+        
+        print("Tamaño inválido, debe ingresar un entero entre 5 y 20.")
+
+
+
+def solicitar_jugada(jugador_dict, cubo_rival, n):
+    """
+    Objetivo: Solicita e interactúa por consola con el jugador para obtener su jugada.
+    Parámetros:
+        - jugador_dict(dict): Información del jugador actual.
+        - cubo_rival(list): Matriz 3D del rival.
+        - n(int): Tamaño del cubo.
+    Devuelve:
+        dict: Diccionario con la jugada seleccionada.
+    """
+    arsenal = jugador_dict.get("arsenal", {})
+
+    texto_armas = []
+    for letra, cant in arsenal.items():
+        cant_str = "Infinito" if cant is None else str(cant)
+        texto_armas.append(f"{letra} ({cant_str})")
+    print("\nArmas disponibles: ", " | ".join(texto_armas))
+
+    while True:
+        arma = input("Seleccione arma (T / R / C / S / L / O / G): ").strip().upper()
+        if arma not in arsenal:
+            print("Arma inválida. Ingrese una de las opciones disponibles.")
+            continue
+        
+        cant = arsenal[arma]
+        if cant is not None and cant <= 0:
+            print(f"Munición insuficiente para {arma}. Elija otra.")
+            continue
+
+        break
+
+    if arma == "S":
+        while True:
+            eje = input("Eje para el Sonar (z/x/y): ").strip().lower()
+            if eje in ("z", "x", "y"):
+                break
+            print("Eje inválido. Debe ser 'z', 'x' o 'y'.")
+
+        while True:
+            try:
+                valor = int(input(f"Valor del plano (1 a {n}): ").strip())
+                if 1 <= valor <= n:
+                    break
+                print(f"El valor debe estar entre 1 y {n}.")
+            except ValueError:
+                print("Debe ingresar un número entero.")
+
+        return {
+            "arma": "S",
+            "eje": eje,
+            "valor": valor
+        }
+
+    elif arma == "L":
+        while True:
+            objetivo = input("Coordenada de origen (z, x, y): ").strip()
+            if tablero.texto_a_punto(objetivo, cubo_rival) is not None:
+                break
+            print("Coordenada inválida, inténtelo de nuevo.")
+
+        while True:
+            eje = input("Eje de barrido (x/y): ").strip().lower()
+            if eje in ("x", "y"):
+                break
+            print("Eje inválido. Para el láser debe elegir 'x' o 'y'.")
+
+        return {
+            "arma": "L",
+            "objetivo": objetivo,
+            "eje": eje
+        }
+
+    else:
+        while True:
+            objetivo = input("Objetivo (z, x, y): ").strip()
+            if tablero.texto_a_punto(objetivo, cubo_rival) is not None:
+                break
+            print("Coordenada inválida, inténtelo de nuevo.")
+
+        return {
+            "arma": arma,
+            "objetivo": objetivo,
+        }
+
+
+# -------------------------------------------
+# Creación e inicialización de Partidas
+# -------------------------------------------
+
 def nueva_partida_1v1(configuracion=None):
-    """Crea una partida entre dos jugadores."""
+    """
+    Objetivo: Inicializar la estructura de datos que representa una nueva partida en modo 1v1.
+    Parámetros:
+        - configuración(dict): Diccionario de configuración que contiene la clave 'n'.
+    Devuelve:
+        dict: Estado inicial de la partida en modo 1v1.
+    """
     configuracion = configuracion or {}
-    n = configuracion.get("n", TAMANO_CUBO)
+    n = configuracion.get("n", tablero.N_POR_DEFECTO)
 
     return {
         "tipo": "1v1",
         "n": n,
-        "jugadores": [
-            crear_jugador(n),
-            crear_jugador(n)
-        ],
+        "jugadores": [crear_jugador(n), crear_jugador(n)],
         "turno": 0,
         "terminada": False,
         "ganador": None,
         "turnos": 0,
-        "dificultades": None
     }
 
 
 def nueva_partida_vs_maquina(configuracion=None, dificultad="facil"):
-    """Crea una partida entre una persona y la máquina."""
+    """
+    Objetivo: Inicializar la estructura de datos que representa una nueva partida en modo 'vs máquina'.
+    Parámetros:
+        - configuración(dict): Diccionario de configuración que contiene la clave 'n'.
+        - dificultad(str): Nivel de dificultad asignado al comportamiento de la computadora.
+    Devuelve:
+        dict: Estado inicial de la partida en modo 'vs máquina'.
+    """
     if dificultad not in DIFICULTADES:
         raise ValueError("La dificultad debe ser facil o dificil.")
 
     configuracion = configuracion or {}
-    n = configuracion.get("n", TAMANO_CUBO)
+    n = configuracion.get("n", tablero.N_POR_DEFECTO)
 
     estado = nueva_partida_1v1({"n": n})
     estado["tipo"] = "vs_maquina"
@@ -118,19 +262,23 @@ def nueva_partida_vs_maquina(configuracion=None, dificultad="facil"):
     return estado
 
 
-def nueva_partida_maquina_vs_maquina(
-    configuracion=None,
-    dificultades=("facil", "facil")
-):
-    """Crea una partida entre dos máquinas."""
-    if len(dificultades) != 2:
-        raise ValueError("Debe indicar dos dificultades.")
-
-    if any(d not in DIFICULTADES for d in dificultades):
-        raise ValueError("Dificultad inválida.")
+def nueva_partida_maquina_vs_maquina(configuracion=None, dificultades=("facil", "facil")):
+    """
+    Objetivo: Inicializa la estructura de datos que representa una nueva partida en
+    modo 'máquina vs máquina'.
+    Parámetros:
+        - configuracion(dict): Diccionario de configuración que contiene el tamaño del cubo n. Si no
+        se especifica, utiliza el valor por defecto.
+        - dificultades(tuple): Tupla de 2 cadenas que establece el nivel de inteligencia de cada
+        máquina. Por defecto se usa 'facil' dos veces.
+    Devuelve:
+        dict: Estado inicial de la partida en modo 'máquina vs máquina'.
+    """
+    if len(dificultades) != 2 or any(d not in DIFICULTADES for d in dificultades):
+        raise ValueError("Debe indicar dos dificultades válidas ('facil' o 'dificil').")
 
     configuracion = configuracion or {}
-    n = configuracion.get("n", TAMANO_CUBO)
+    n = configuracion.get("n", tablero.N_POR_DEFECTO)
 
     estado = nueva_partida_1v1({"n": n})
     estado["tipo"] = "maquina_vs_maquina"
@@ -138,133 +286,165 @@ def nueva_partida_maquina_vs_maquina(
 
     return estado
 
-
-def _buscar_nave(flota_jugador, punto):
-    """Busca qué nave contiene una coordenada."""
-    for nave in flota_jugador:
-        if punto in nave[1]:
-            return nave
-
-    return None
-
+# ----------------------------------------------------
+# Lógica principal de juego y ejecución de turnos
+# ----------------------------------------------------
 
 def ejecutar_turno(estado, jugada):
-    """Ejecuta una jugada y actualiza el estado de la partida."""
-    if estado.get("terminada"):
-        raise ErrorJugada("La partida ya terminó.")
+    """
+    Objetivo: Procesa la jugada de un turno, calculando impacto del arma sobre el cubo,
+    actualizando estado de las naves, y registrando el evento en el historial.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+        - jugada(dict): Diccionario con las claves 'arma' y 'objetivo'.
+    Devuelve:
+        dict: Diccionario del estado de la partida actualizado.
+    """
+    if estado["terminada"]:
+        raise ValueError("La partida ya terminó.")
 
     jugador_actual = estado["turno"]
     rival = 1 - jugador_actual
 
-    jugador = estado["jugadores"][jugador_actual]
-    objetivo_jugador = estado["jugadores"][rival]
-    cubo_rival = objetivo_jugador["cubo"]
+    jugador_dict = estado["jugadores"][jugador_actual]
+    cubo_rival = estado["jugadores"][rival]["cubo"]
+    flota_rival = estado["jugadores"][rival]["flota"]
+    n = estado["n"]
 
-    arma = str(jugada.get("arma", "T")).strip().upper()
+    # ---------------------------------------------------
+    # Verificamos si el arma coincide con el catálogo
+    # ---------------------------------------------------
+    arma = jugada.get("arma", "").strip().upper()
+    arsenal = jugador_dict.get("arsenal", {})
 
-    if arma not in obtener_catalogo_armas():
-        raise ErrorJugada("El arma seleccionada no existe.")
+    if arma not in armamento.obtener_catalogo_armas():
+        raise ErrorPartida(f"El arma {arma} no es válida.")
 
-    punto = jugada.get("punto")
+    # -----------------------------
+    # Descontamos la munición
+    # -----------------------------
+    if not armamento.descontar_municion(arsenal, arma):
+        raise ErrorPartida(f"No queda munición disponible para {arma}.")
 
-    if punto is None:
-        punto = tablero.texto_a_punto(
-            jugada.get("objetivo", ""),
-            cubo_rival
-        )
+    # ------------------------------------
+    # Procesamos según el tipo de arma
+    # ------------------------------------
+    hubo_impacto = False
+    texto_registro_objetivo = ""
+    naves_hundidas_nombres = []
 
-    if not tablero.es_punto_valido(cubo_rival, punto):
-        raise ErrorJugada("La coordenada indicada no es válida.")
+    # Si el arma es el Sonar
+    if arma == "S":
+        eje = jugada.get("eje", "z").lower()
+        try:
+            valor = int(jugada.get("valor", 1))
+        except (ValueError, TypeError):
+            raise ErrorPartida("El valor del plano debe ser un número entero.")
 
-    municion = jugador.setdefault(
-        "municion",
-        _municion_inicial()
-    )
+        texto_registro_objetivo = f"{eje}={valor}"
 
-    disponible = municion.get(arma)
+        contactos, celdas_plano = radar.sonar_por_planos(cubo_rival, eje, valor)
 
-    if disponible is not None and disponible <= 0:
-        raise ErrorJugada("No queda munición para esa arma.")
+        for punto in celdas_plano:
+            if tablero.leer_celda(cubo_rival, punto) == tablero.NAVE_OCULTA:
+                tablero.escribir_celda(cubo_rival, punto, tablero.DETECTADO)
+            estado_celda = tablero.leer_celda(cubo_rival, punto)
 
-    celdas = obtener_celdas_afectadas(
-        arma,
-        punto,
-        estado["n"]
-    )
+        contactos_str = "contacto detectado" if contactos == 1 else "contactos detectados"
 
-    if not celdas:
-        raise ErrorJugada(
-            "El efecto de esta arma todavía no está disponible."
-        )
+        print(f"\n[RESULTADO SONAR] Escaneo en plano {eje}={valor}: {contactos} {contactos_str}")
+        resultado_str = f"{contactos} contactos"
 
-    impacto = False
-    resultados = []
+    #Armas ofensivas
+    else:
+        if arma == "L":
+            eje_laser = jugada.get("eje", "x").lower()
+            texto_objetivo = jugada.get("objetivo")
+            punto_origen = tablero.texto_a_punto(texto_objetivo, cubo_rival)
 
-    for celda in celdas:
-        estado_celda = tablero.leer_celda(
-            cubo_rival,
-            celda
-        )
+            if punto_origen is None or eje_laser not in ("x", "y"):
+                raise ErrorPartida("Los parámetros para el barrido láser son inválidos.")
 
-        if estado_celda == tablero.NAVE_OCULTA:
-            impacto = True
+            texto_registro_objetivo = f"{texto_objetivo} (eje {eje_laser})"
+            celdas_afectadas = armamento.obtener_celdas_afectadas("L", (punto_origen, eje_laser), n, cubo_rival, flota_rival)
 
-            tablero.escribir_celda(
-                cubo_rival,
-                celda,
-                tablero.IMPACTO
-            )
+        #Torpedo, Racimo y Carga de profundidad
+        else:
+            punto_objetivo = tablero.texto_a_punto(texto_objetivo, cubo_rival)
 
-            nave = _buscar_nave(
-                objetivo_jugador["flota"],
-                celda
-            )
+            if punto_objetivo is None or tablero.es_punto_valido(cubo_rival, punto_objetivo):
+                raise ErrorPartida("Coordenada de disparo inválida.")
 
-            if nave is not None and celda not in nave[2]:
-                nave[2].append(celda)
+            texto_registro_objetivo = f"{tablero.punto_a_texto(punto_origen)} (eje {eje_laser})"
+            celdas_afectadas = armamento.obtener_celdas_afectadas(arma, punto_objetivo, n, cubo_rival, flota_rival)
 
-                if len(nave[2]) >= len(nave[1]):
-                    for punto_nave in nave[1]:
-                        tablero.escribir_celda(
-                            cubo_rival,
-                            punto_nave,
-                            tablero.HUNDIDO
-                        )
+        if not celdas_afectadas:
+            raise ErrorJugada("El disparo no afectó celdas válidas.")
+        
+        #Impactar celdas afectadas
+        for punto in celdas_afectadas:
+            estado_actual = tablero.leer_celda(cubo_rival, punto)
 
-                    resultados.append(
-                        f"Nave {nave[0]} hundida"
-                    )
+            if estado_actual in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+                impacto_valido, letra, estado_impacto = flota.registrar_impacto(flota_rival, punto, arma)
 
-        elif estado_celda == tablero.SIN_EXPLORAR:
-            tablero.escribir_celda(
-                cubo_rival,
-                celda,
-                tablero.AGUA_MARCADA
-            )
+                if estado_impacto == "inmune":
+                    continue
 
-    if disponible is not None:
-        municion[arma] = disponible - 1
+                if impacto_valido:
+                    hubo_impacto = True
+                    tablero.escribir_celda(cubo_rival, punto, tablero.IMPACTO)
 
-    jugador["disparos"].append(punto)
+                if estado_impacto == "hundida":
+                    for nave in flota_rival:
+                        if nave[0] == letra and punto in nave[1]:
+                            for p in nave[1]:
+                                tablero.escribir_celda(cubo_rival, p, tablero.HUNDIDO)
+                            break
 
+                    nombre_nave = flota.CATALOGO_NAVES.get(letra, {}).get("nombre", letra)
+                    if nombre_nave not in naves_hundidas_nombres:
+                        naves_hundidas_nombres.append(nombre_nave)
+
+                    print(f"¡HUNDIDO! Se ha destruido la nave {nombre_nave} rival.")
+
+                    if letra == "E":
+                        print("¡Estación Orbital destruida! Se ha otorgado una recompensa al atacante.")
+
+                elif estado_impacto == "averiada":
+                    print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}")
+
+                    if letra == "D":
+                        celda_revelada = flota.revelar_celda_rival(flota_rival, cubo_rival)
+
+                        if celda_revelada:
+                            tablero.escribir_celda(cubo_rival, celda_revelada, tablero.DETECTADO)
+                            print(f"¡EFECTO DESTRUCTOR! Se reveló una nave rival en {tablero.punto_a_texto(celda_revelada)}.")
+
+                elif estado_actual == tablero.SIN_EXPLORAR:
+                    tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
+
+        if naves_hundidas_nombres:
+            resultado_str = f"Hundido ({', '.join(naves_hundidas_nombres)})"
+            print(f"\n[RESULTADO FINAL]: HUNDIDO - {', '.join(naves_hundidas_nombres)}")
+        elif hubo_impacto:
+            resultado_str = "Impacto"
+            print(f"\n[RESULTADO FINAL]: IMPACTO")
+        else:
+            resultado_str = "Agua"
+            print(f"\n[RESULTADO FINAL]: AGUA")
+
+    # -------------------------------
+    # Registramos en el historial
+    # -------------------------------
+    num_turno = len(registro.obtener_historial()) + 1
+    id_jugador = f"Jugador {jugador_actual + 1}"
+    registro.registrar_turno(num_turno, id_jugador, arma, texto_registro_objetivo, resultado_str)
+
+    # ---------------------------------------------------
+    # Verificamos si hay ganador y cambiamos de turno
+    # ---------------------------------------------------
     estado["turnos"] = estado.get("turnos", 0) + 1
-
-    descripcion = "Impacto" if impacto else "Agua"
-
-    if resultados:
-        descripcion += ". " + ", ".join(resultados)
-
-    try:
-        registro.registrar_turno(
-            estado["turnos"],
-            f"Jugador {jugador_actual + 1}",
-            arma,
-            tablero.punto_a_texto(punto),
-            descripcion
-        )
-    except (AttributeError, TypeError):
-        pass
-
     ganador = hay_ganador(estado)
 
     if ganador is None:
@@ -273,26 +453,68 @@ def ejecutar_turno(estado, jugada):
     return estado
 
 
-def _objetivos_disponibles(estado, jugador):
-    """Obtiene las coordenadas que la máquina todavía no utilizó."""
-    disparos = estado["jugadores"][jugador]["disparos"]
-    n = estado["n"]
+def hay_ganador(estado):
+    """
+    Objetivo: Verificar si alguno de los jugadores logró hundir la totalidad
+    de la flota rival.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        int o None: El número del jugador ganador si la partida terminó, 
+        o None si la flota del oponente aún conserva celdas.
+    """
+    for jugador in range(2):
+        flota_rival = estado["jugadores"][1 - jugador]["flota"]
 
+        if flota_rival and flota.flota_hundida(flota_rival):
+            estado["terminada"] = True
+            estado["ganador"] = jugador
+
+            return jugador
+    return None
+
+
+# -----------------------------------
+# Comportamiento de la máquina 
+# -----------------------------------
+
+def objetivos_disponibles(estado, jugador):
+    """
+    Objetivo: Genera la lista de coordenadas (z, x, y) dentro del cubo que el jugador o la máquina
+    aún no han utilizado para disparar.
+    Parámetros:
+        - estado(dict): Diccionario con el estado actual de la partida.
+        - jugador(int): Índice del jugador.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con las coordenadas disponibles que permanencen sin explorar
+        en el historial de disparos de dicho jugador.
+    """
+    disparos_hechos = estado["jugadores"][jugador].get("disparos",[])
+    n = estado["n"]
     disponibles = []
 
-    for z in range(1, n + 1):
-        for x in range(1, n + 1):
-            for y in range(1, n + 1):
+    for z in range(1, estado["n"] + 1):
+        for x in range(1, estado["n"] + 1):
+            for y in range(1, estado["n"] + 1):
                 punto = (z, x, y)
-
-                if punto not in disparos:
+                if punto not in disparos_hechos:
                     disponibles.append(punto)
 
     return disponibles
 
 
-def _elegir_objetivo_dificil(estado, jugador, disponibles):
-    """Busca disparar cerca de impactos anteriores."""
+def elegir_objetivo_dificil(estado, jugador, disponibles):
+    """
+    Objetivo: Selecciona de forma táctica la coordenada de disparo para la
+    máquina en dificultad 'dificil'.
+    Parámetros:
+        - estado(dict): Diccionario con el estado actual de la partida.
+        - jugador(int): Índice del jugador.
+        - disponibles(list): Lista de tuplas (z, x, y) con las coordenadas
+        sin explorar.
+    Devuelve:
+        tuple: Coordenada (z, x, y) seleccionada para el disparo.
+    """
     rival = estado["jugadores"][1 - jugador]
     impactos = []
 
@@ -308,20 +530,8 @@ def _elegir_objetivo_dificil(estado, jugador, disponibles):
                     impactos.append(punto)
 
     candidatos = []
-
     for impacto in impactos:
-        z, x, y = impacto
-
-        vecinos = (
-            (z - 1, x, y),
-            (z + 1, x, y),
-            (z, x - 1, y),
-            (z, x + 1, y),
-            (z, x, y - 1),
-            (z, x, y + 1)
-        )
-
-        for vecino in vecinos:
+        for vecino in tablero.vecinos_ortogonales(rival["cubo"], impacto):
             if vecino in disponibles and vecino not in candidatos:
                 candidatos.append(vecino)
 
@@ -332,414 +542,414 @@ def _elegir_objetivo_dificil(estado, jugador, disponibles):
 
 
 def turno_maquina(estado):
-    """Ejecuta el turno de una máquina."""
+    """
+    Objetivo: Seleccionar una coordenada de disparo de manera aleatoria.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        function: Devuelve la función 'ejecutar_turno' con los parámetros de estado y la jugada
+        actualizados para realizar la jugada.
+    """
     jugador = estado["turno"]
 
     if estado["tipo"] == "1v1":
-        raise ErrorPartida(
-            "Esta partida no tiene jugadores controlados por la máquina."
-        )
+        raise ErrorPartida("Esta partida no tiene jugadores controlados por la máquina.")
 
     if estado["tipo"] == "vs_maquina" and jugador == 0:
-        raise ErrorPartida("Es el turno del jugador.")
+        raise ErrorPartida("Es el turno del jugador humano.")
 
     dificultad = estado.get("dificultad", "facil")
-
     if estado["tipo"] == "maquina_vs_maquina":
         dificultad = estado["dificultades"][jugador]
 
-    disponibles = _objetivos_disponibles(
-        estado,
-        jugador
-    )
-
+    disponibles = objetivos_disponibles(estado, jugador)
     if not disponibles:
-        raise ErrorPartida(
-            "No quedan coordenadas disponibles para disparar."
-        )
+        raise ErrorPartida("No quedan coordenadas disponibles para disparar.")
 
     if dificultad == "dificil":
-        objetivo = _elegir_objetivo_dificil(
-            estado,
-            jugador,
-            disponibles
-        )
+        objetivo = elegir_objetivo_dificil(estado, jugador, disponibles)
     else:
         objetivo = random.choice(disponibles)
 
-    return ejecutar_turno(
-        estado,
-        {
-            "arma": "T",
-            "punto": objetivo
-        }
-    )
+    estado["jugadores"][jugador]["disparos"].append(objetivo)
+    jugada = {"arma": "T", "punto": objetivo}
 
+    return ejecutar_turno(estado, jugada)
 
-def hay_ganador(estado):
-    """Comprueba si uno de los jugadores hundió toda la flota rival."""
-    for jugador in range(2):
-        flota_rival = estado["jugadores"][1 - jugador]["flota"]
+# -----------------------------------------------
+# Menús, submenús y preparación de flota
+# -----------------------------------------------
 
-        if flota_rival and all(
-            len(nave[2]) >= len(nave[1])
-            for nave in flota_rival
-        ):
-            estado["terminada"] = True
-            estado["ganador"] = jugador
+def ubicacion_manual(jugador, n=tablero.N_POR_DEFECTO):
+    """
+    Objetivo: Gestiona la interfaz por consola para que el jugador ubique manualmente
+    todas las naves de la flota.
+    Parámetros:
+        - jugador(dict): Diccionario del jugador con la matriz 'cubo' y
+        la lista 'flota'.
+        - n(int): Dimensión del arista del cubo(por defecto 8).
+    Devuelve:
+        None: Modifica de forma directa las celdas del cubo y asigna
+        las naves del jugador.
+    """
+    cubo = jugador["cubo"]
+    flota_jugador = jugador["flota"]
+    pendientes = ["F", "F", "F", "D", "D", "S", "S", "C", "P", "E"]
 
-            return jugador
-
-    return None
-
-
-def ubicacion_manual(jugador, n=8):
-    """Permite ubicar manualmente las naves."""
-    pendientes = [
-        "F", "F", "F",
-        "D", "D",
-        "S", "S",
-        "C", "P", "E"
-    ]
-
-    while pendientes:
-        print("\nPendientes:", formatear_pendientes(pendientes))
-
+    while len(pendientes) > 0:
+        texto_pendientes = formatear_pendientes(pendientes)
+        print(f"\nPendientes: {texto_pendientes}")
         nave = input("Nave (F/D/S/C/P/E): ").strip().upper()
 
         if nave not in pendientes:
             print("Nave inválida o ya ubicada.")
             continue
 
-        texto = input("Tramo (z,x,y-z,x,y): ").strip()
+        if nave == "E":
+            texto = input("Tramo de la estación orbital: ").strip()
 
-        tramo = tablero.texto_a_tramo(
-            texto,
-            jugador["cubo"]
-        )
+        else:
+            texto = input("Tramo Desde-Hasta: ").strip()
 
+        tramo = tablero.texto_a_tramo(texto, cubo)
         if tramo is None:
-            print("Formato o coordenada inválida.")
+            print("Formato de coordenada o rango inválido.")
             continue
 
+        desde, hasta = tramo
         try:
-            flota.ubicar_nave(
-                jugador["cubo"],
-                jugador["flota"],
-                nave,
-                tramo[0],
-                tramo[1],
-                n
-            )
-
+            flota.ubicar_nave(cubo, flota_jugador, nave, desde, hasta, n)
             pendientes.remove(nave)
-            print("Nave ubicada.")
+            print(f"Nave {nave} ubicada exitosamente.")
+        except ValueError as ve:
+            print(f"La nave no se puede ubicar ahi: {ve}")
 
-        except ValueError as error:
-            print("No se pudo ubicar:", error)
 
-
-def submenu_ubicacion(jugador, n=8):
-    """Permite elegir ubicación manual o automática."""
+def submenu_ubicacion(jugador, n=tablero.N_POR_DEFECTO):
+    """
+    Objetivo: Desplegar un menú interactivo correspondiente a
+    la selección de ubicación manual o automática de la flota del jugador.
+    Parámetros:
+        - jugador(dict): Diccionario que representa la estructura de datos
+        del jugador.
+        - n(int): Tamaño del arista del cubo(por defecto 8).
+    Devuelve:
+        None: Invoca a las funciones de ubicación(manual o automática) que
+        modifican de forma directa el cubo y la flota del jugador.
+    """
     while True:
-        print("1 - Ubicación manual")
+        print("\n1 - Ubicación manual")
         print("2 - Ubicación automática")
-
-        opcion = input("Opción: ").strip()
+        opcion = input("Opción: ")
 
         if opcion == "1":
             ubicacion_manual(jugador, n)
-            return
+            break
 
         elif opcion == "2":
             colocar_flota_automatica(jugador, n)
             print("Flota ubicada automáticamente.")
-            return
+            break
 
         else:
-            print("Opción inválida.")
+            print("Opción inválida")
 
 
-def _pedir_dificultad(etiqueta="Máquina"):
-    """Solicita el nivel de dificultad."""
+def pedir_dificultad(etiqueta="Máquina"):
+    """
+    Objetivo: Solicita e interactua por consola con el usuario para pedir el nivel de dificultad.
+    Parámetros:
+        - etiqueta(str): Etiqueta descriptiva que indentifica a la máquina.
+    Devuelve:
+        str: Cadena de texto con la opción de dificultad elegida y validada.
+    """
     while True:
-        print(
-            f"Dificultad de {etiqueta}: "
-            "1 - Fácil / 2 - Difícil"
-        )
-
+        print(f"Dificultad de {etiqueta}: 1 - Fácil / 2 - Difícil")
         opcion = input("Opción: ").strip()
 
         if opcion == "1":
             return "facil"
-
         elif opcion == "2":
             return "dificil"
-
         else:
             print("Opción inválida.")
 
 
-def _preparar_partida(tipo):
-    """Prepara las flotas y el registro de la partida."""
-    try:
-        registro.inicializar_registro()
-    except AttributeError:
-        pass
+def preparar_partida(tipo):
+    """
+    Objetivo: Configura y prepara la partida según el modo de juego seleccionado.
+    Parámetros:
+        - tipo(str): Modalidad de la partida.
+    Devuelve:
+        dict: Diccionario con el estado completo e inicializado de la partida.
+    """
+    registro.inicializar_registro()
+    n = pedir_tamanio_cubo()
 
     if tipo == "1v1":
-        estado = nueva_partida_1v1({
-            "n": TAMANO_CUBO
-        })
-
-        for indice in range(2):
-            print(f"\n--- Flota del Jugador {indice + 1} ---")
-
-            submenu_ubicacion(
-                estado["jugadores"][indice]
-            )
+        estado = nueva_partida_1v1({"n": n})
+        print("\n--- Flota de Jugador 1 ---")
+        submenu_ubicacion(estado["jugadores"][0], n)
+        print("\n--- Flota de Jugador 2 ---")
+        submenu_ubicacion(estado["jugadores"][1], n)
 
     elif tipo == "vs_maquina":
-        dificultad = _pedir_dificultad()
-
-        estado = nueva_partida_vs_maquina(
-            {"n": TAMANO_CUBO},
-            dificultad
-        )
-
+        dificultad = pedir_dificultad("Máquina")
+        estado = nueva_partida_vs_maquina({"n": n},dificultad)
         print("\n--- Tu flota ---")
-
-        submenu_ubicacion(
-            estado["jugadores"][0]
-        )
-
-        colocar_flota_automatica(
-            estado["jugadores"][1],
-            estado["n"],
-            semilla=2
-        )
+        submenu_ubicacion(estado["jugadores"][0], n)
+        print("\n--- Flota de la Máquina ---")
+        colocar_flota_automatica(estado["jugadores"][1], n)
 
     else:
-        dificultades = (
-            _pedir_dificultad("Máquina 1"),
-            _pedir_dificultad("Máquina 2")
-        )
-
-        estado = nueva_partida_maquina_vs_maquina(
-            {"n": TAMANO_CUBO},
-            dificultades
-        )
-
-        colocar_flota_automatica(
-            estado["jugadores"][0],
-            estado["n"],
-            semilla=1
-        )
-
-        colocar_flota_automatica(
-            estado["jugadores"][1],
-            estado["n"],
-            semilla=2
-        )
+        d1 = pedir_dificultad("Máquina 1")
+        d2 = pedir_dificultad("Máquina 2")
+        estado = nueva_partida_maquina_vs_maquina({"n": n}, (d1, d2))
+        colocar_flota_automatica( estado["jugadores"][0], estado["n"], semilla=1)
+        colocar_flota_automatica(estado["jugadores"][1], estado["n"], semilla=2)
 
     return estado
 
 
-def _guardar_partida(estado):
-    """Guarda la partida si registro.py tiene implementada esa función."""
-    if not hasattr(registro, "guardar_partida"):
-        print(
-            "El módulo registro.py todavía no implementa "
-            "guardar_partida()."
-        )
-        return False
-
+def guardar_partida(estado):
+    """
+    Objetivo: Solicita al usuario un nombre de archivo válido y gestiona el guardado del
+    estado actual de la partida.
+    Parámetros:
+        - estado(dict): Diccionario con el estado actual de la partida.
+    Devuelve:
+        bool: True si la partida se guardó exitosamente, False si el proceso fue cancelado
+        o se produjo un error.
+    """
     while True:
-        nombre = input(
-            "Nombre de la partida "
-            "(letras, números, _ o -, máximo 30): "
-        ).strip()
-
-        if re.fullmatch(PATRON_NOMBRE, nombre):
-            break
-
-        print("Nombre inválido.")
-
+            nombre = input("Nombre de la partida (máx 30 caracteres): ").strip()
+            if re.fullmatch(PATRON_NOMBRE, nombre):
+                break
+    
+            print("Nombre inválido. Use letras, números, _ o -.")
+    
     try:
         registro.guardar_partida(estado, nombre)
-
-        print("Partida guardada.")
+        print(f"¡Partida {nombre} guardada exitósamente!")
         return True
 
     except Exception as error:
-        print("No se pudo guardar la partida:", error)
+        print(f"Error al guardar partida: {error}")
         return False
 
 
-def _continuar_partida():
-    """Carga una partida guardada si registro.py tiene las funciones necesarias."""
-    requeridas = (
-        "listar_partidas",
-        "cargar_partida"
-    )
-
-    if not all(
-        hasattr(registro, nombre)
-        for nombre in requeridas
-    ):
-        print(
-            "El módulo registro.py todavía no implementa "
-            "listado y carga JSON."
-        )
+def continuar_partida():
+    """
+    Objetivo: Lista por consola las partidas guardadas e interactua con el
+    usuario para seleccionar, cargar y reanudar una partida previa.
+    Devuelve:
+        dict o None: Diccionario con el estado recuperado de la partida si
+        la carga fue exitosa, None si no existen partidas guardadas o si
+        ocurre un error.
+    """
+    partidas = registro.listar_partidas()
+    if not partidas:
+        print("No se encontraron partidas guardadas.")
         return None
+
+    print("\nPartidas disponibles: ")
+    for idx, nom in enumerate(partidas, 1):
+        print(f"{idx} - {nom}")
+
+    sel = input("Seleccione el número o nombre de la partida: ").strip()
+    if sel.isdigit() and 1 <= int(sel) <= len(partidas):
+        nombre_elegido = partidas[int(sel) - 1]
+    else:
+        nombre_elegido = sel
 
     try:
-        partidas = registro.listar_partidas()
-
-        if not partidas:
-            print("No hay partidas guardadas.")
-            return None
-
-        for indice, nombre in enumerate(partidas, 1):
-            print(f"{indice} - {nombre}")
-
-        seleccion = input(
-            "Partida a continuar: "
-        ).strip()
-
-        if (
-            not seleccion.isdigit()
-            or not 1 <= int(seleccion) <= len(partidas)
-        ):
-            print("Selección inválida.")
-            return None
-
-        return registro.cargar_partida(
-            partidas[int(seleccion) - 1]
-        )
-
+        estado = registro.cargar_partida(nombre_elegido)
+        print(f"¡Partida '{nombre_elegido}' cargada exitosamente!")
+        return estado
     except Exception as error:
-        print("No se pudo recuperar la partida:", error)
+        print(f"No se pudo recuperar la partida: {error}")
         return None
 
 
-def _turno_humano(estado):
-    """Gestiona el turno de un jugador humano."""
-    jugador = estado["turno"]
-
-    while True:
-        print(f"\n--- Turno del Jugador {jugador + 1} ---")
-        print("1 - Disparar")
-        print("2 - Ver mi cubo")
-        print("3 - Guardar y salir")
-
-        opcion = input("Opción: ").strip()
-
-        if opcion == "2":
-            print(
-                tablero.dibujar_cubo(
-                    estado["jugadores"][jugador]["cubo"],
-                    mostrar_naves=True
-                )
-            )
-
-            continue
-
-        elif opcion == "3":
-            _guardar_partida(estado)
-            return False
-
-        elif opcion != "1":
-            print("Opción inválida.")
-            continue
-
-        catalogo = obtener_catalogo_armas()
-
-        arma = input(
-            "Arma (T/R/C/S/L/O/G): "
-        ).strip().upper()
-
-        if arma not in catalogo:
-            print("Arma inválida.")
-            continue
-
-        objetivo = input(
-            "Objetivo (z,x,y): "
-        ).strip()
-
-        try:
-            ejecutar_turno(
-                estado,
-                {
-                    "arma": arma,
-                    "objetivo": objetivo
-                }
-            )
-
-            print("Jugada realizada.")
-            return True
-
-        except ErrorPartida as error:
-            print("No se pudo realizar la jugada:", error)
-
-        except (ValueError, TypeError) as error:
-            print("Entrada inválida:", error)
+def mostrar_resumen_final():
+    """
+    Objetivo: Obtiene las estadísticas globales de la partida e imprime por consola
+    el resumen consolidado.
+    Devuelve:
+        None: Imprime directamente por consola el informe final.
+    """
+    estadisticas = registro.obtener_estadisticas_partida()
+    print("\n========================================")
+    print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas['total_turnos']}")
+    print("\n========================================")
+    for nombre_jugador, datos in estadisticas["jugadores"].items():
+        print(f"\nEstadísticas de {nombre_jugador}: ")
+        print(f"- Disparos realizados: {datos['disparos']}")
+        print(f"- Impactos: {datos['impactos']} | Agua: {datos['agua']}")
+        print(f"- Efectividad del tiro: {datos['efectividad']}")
+        print(f"- Desglose de armas usadas: {datos['armas']}")
 
 
 def partida_1v1(estado):
-    """Ejecuta una partida entre dos personas."""
+    """
+    Objetivo: Gestiona el bucle principal de juego en modo 1v1.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        None: Se ejecuta de manera interactiva por consola hasta
+        que se determine un ganador o el usuario decida salir al
+        menú principal.
+    """
     while not estado["terminada"]:
-        if not _turno_humano(estado):
-            break
+        jugador = estado["turno"]
+        print("----------------------------")
+        print("Turno de Jugador", jugador + 1)
+        print("----------------------------")
+        print("1 - Disparar")
+        print("2 - Ver el cubo")
+        print("3 - Métricas de radar")
+        print("4 - Guardar y salir")
 
-    _mostrar_ganador(estado)
+        opcion = input("Opción: ").strip()
 
+        if opcion == "1":
+            jugador_dict = estado["jugadores"][jugador]
+            cubo_rival = estado["jugadores"][1 - jugador]["cubo"]
+            n = estado["n"]
 
-def partida_vs_maquina(estado):
-    """Ejecuta una partida entre una persona y la máquina."""
-    while not estado["terminada"]:
+            jugada = solicitar_jugada(jugador_dict, cubo_rival, n)
 
-        if estado["turno"] == 0:
-            if not _turno_humano(estado):
+            try:
+                ejecutar_turno(estado, jugada)
+                print("Disparo realizado.")
+
+                if estado["terminada"]:
+                    print(f"\n ¡TERMINÓ EL JUEGO! GANADOR: JUGADOR {estado['ganador'] + 1}")
+                    mostrar_resumen_final()
+
+            except ErrorPartida as error:
+                print("Error:", error)
+
+        elif opcion == "2":
+            cubo_jugador = estado["jugadores"][jugador]["cubo"]
+            print(tablero.dibujar_cubo(cubo_jugador, mostrar_naves=True))
+
+        elif opcion == "3":
+            met = radar.comparar_busquedas(estado["jugadores"][1 - jugador]["flota"], estado["n"])
+            print("\n=== MÉTRICAS DE BUSQUEDA EN RADAR ===")
+            for nave, datos in met.items():
+                print(f"Nave {nave} | Lineal {datos['lineal']} ops | Optimizada: {datos['optimizada']} ops | Recursiva: {datos['recursiva']} ops")
+
+        elif opcion == "4":
+            if guardar_partida(estado):
                 break
 
         else:
-            turno_maquina(estado)
-            print("La máquina realizó su disparo.")
+            print("Opción inválida")
 
-    _mostrar_ganador(estado)
 
+def partida_vs_maquina(estado):
+    """
+    Objetivo: Gestiona el bucle principal de juego en modo
+    'vs máquina'.
+    Parámetros:
+        - estado(dict): Diccionario con el estado de la partida.
+    Devuelve:
+        None: Se ejecuta de manera interactiva por consola hasta
+        que se determine un ganador o el usuario decida salir
+        al menú principal.
+    """
+    while not estado["terminada"]:
+        if estado["turno"] == 0:
+            print("----------------------------")
+            print("Turno del Jugador (Usted)")
+            print("----------------------------")
+            print("1 - Disparar")
+            print("2 - Ver el cubo")
+            print("3 - Métricas de radar")
+            print("4 - Guardar y salir")
+
+            opcion = input("Opción: ").strip()
+
+            if opcion == "1":
+                jugador_dict = estado["jugadores"][0]
+                cubo_rival = estado["jugadores"][1]["cubo"]
+                n = estado["n"]
+
+                jugada = solicitar_jugada(jugador_dict, cubo_rival, n)
+
+                try:
+                    ejecutar_turno(estado, jugada)
+                except ErrorPartida as error:
+                    print(f"Error: en jugada: {error}")
+
+            elif opcion == "2":
+                cubo_jugador = estado["jugadores"][0]["cubo"]
+                print(tablero.dibujar_cubo(cubo_jugador, mostrar_naves=True))
+
+            elif opcion == "3":
+                met = radar.comparar_busquedas(estado["jugadores"][1 - jugador]["flota"], estado["n"])
+                print("\n=== MÉTRICAS DE BUSQUEDA EN RADAR ===")
+                for nave, datos in met.items():
+                    print(f"Nave {nave} | Lineal {datos['lineal']} ops | Optimizada: {datos['optimizada']} ops | Recursiva: {datos['recursiva']} ops")
+
+            elif opcion == "4":
+                if guardar_partida(estado):
+                    break
+
+            else:
+                print("Opción inválida")
+
+        else:
+            print("----------------------------")
+            print("Turno de la máquina")
+            print("----------------------------")
+            try:
+                turno_maquina(estado)
+                print("La máquina realizó su disparo")
+            except ErrorPartida as error:
+                print(f"Error en máquina: {error}")
+
+        if estado["terminada"]:
+            ganador_str = "JUGADOR 1 (Usted)" if estado["ganador"] == 0 else "JUGADOR 2 (Máquina)"
+            print(f"\n¡TERMINÓ EL JUEGO! GANADOR: {ganador_str}")
+            mostrar_resumen_final()
+            
 
 def partida_maquina_vs_maquina(estado):
-    """Ejecuta una partida entre dos máquinas."""
+    """
+    Objetivo: Gestiona el bucle principal de juego en modo
+    'máquina vs máquina'.
+    Parámetros:
+        - estado(dict): Diccionario con el estado actual de la partida.
+    Devuelve:
+        None: Se ejecuta de manera interactiva por consola hasta
+        que se determine un ganador o el usuario decida salir
+        al menú principal.
+    """
     while not estado["terminada"]:
         jugador = estado["turno"]
+        print(f"Turno de Máquina {jugador + 1} ({estado['dificultades'][jugador]}).")
+        try:   
+            turno_maquina(estado)
+        except ErrorPartida as error:
+            print(f"Error en simulación: {error}")
+            break
 
-        print(
-            f"Turno de Máquina {jugador + 1} "
-            f"({estado['dificultades'][jugador]})."
-        )
-
-        turno_maquina(estado)
-
-        if hasattr(registro, "obtener_ultimo_turno"):
-            print("Disparo:", registro.obtener_ultimo_turno())
-        else:
-            print("Disparo realizado.")
-
-    _mostrar_ganador(estado)
-
-
-def _mostrar_ganador(estado):
-    """Muestra el ganador de la partida."""
-    if estado.get("terminada"):
-        print(
-            f"\n¡Ganó el Jugador {estado['ganador'] + 1}!"
-        )
+        if estado["terminada"]:
+            print(f"\n¡TERMINÓ EL JUEGO! GANADOR: MÁQUINA {estado['ganador']} + 1")
+            mostrar_resumen_final()
 
 
 def menu_principal():
-    """Muestra el menú principal del juego."""
+    """
+    Objetivo: Desplega el menú principal del juego 'Operación Cubo'
+    y dirige el flujo de ejecución del programa según la opción
+    seleccionada por el jugador.
+    Devuelve:
+        None: Ejecuta un bucle interactivo por consola hasta que el
+        usuario decida salir.
+    """
     while True:
         print("\n==============================")
         print("       OPERACIÓN CUBO")
@@ -754,27 +964,24 @@ def menu_principal():
 
         try:
             if opcion == "1":
-                estado = _preparar_partida("1v1")
+                estado = preparar_partida("1v1")
                 partida_1v1(estado)
 
             elif opcion == "2":
-                estado = _preparar_partida("vs_maquina")
+                estado = preparar_partida("vs_maquina")
                 partida_vs_maquina(estado)
 
             elif opcion == "3":
-                estado = _preparar_partida("maquina_vs_maquina")
+                estado = preparar_partida("maquina_vs_maquina")
                 partida_maquina_vs_maquina(estado)
 
             elif opcion == "4":
-                estado = _continuar_partida()
-
+                estado = continuar_partida()
                 if estado is not None:
                     if estado["tipo"] == "1v1":
                         partida_1v1(estado)
-
                     elif estado["tipo"] == "vs_maquina":
                         partida_vs_maquina(estado)
-
                     else:
                         partida_maquina_vs_maquina(estado)
 
@@ -784,8 +991,12 @@ def menu_principal():
 
             else:
                 print("Opción inválida")
+
         except ErrorPartida as error:
             print(f"Error en la partida : {error}")
-        
-#Ejecución de programa principal
-menu_principal()
+        except Exception as error:
+            print(f"Ocurrió un error inesperado: {error}")
+
+
+if __name__ == "__main__":
+    menu_principal()
