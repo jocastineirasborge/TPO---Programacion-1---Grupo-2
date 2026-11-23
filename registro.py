@@ -69,8 +69,8 @@ def obtener_estadisticas_jugador(jugador_num):
     agua = 0
     armas = {}
 
-    for _, jg, arma, _, res in historial:
-        if jg == jugador_num:
+    for _, jugador, arma, _, res in historial:
+        if jugador == jugador_num:
             disparos += 1
             armas[arma] = armas.get(arma, 0) + 1
             if res in ("Impacto", "Hundido") or "contactos" in str(res):
@@ -93,7 +93,6 @@ def obtener_estadisticas_jugador(jugador_num):
 def obtener_estadisticas_partida():
     """
     Objetivo: Obtener el resumen global de estadísticas de la partida.
-    Parámetros: Ninguno.
     Devuelve: dict con total de turnos y métricas por jugador.
     """
     historial = obtener_historial()
@@ -116,7 +115,8 @@ def guardar_partida(estado, nombre_archivo):
     Parámetros:
         - estado (dict): Diccionario con el estado completo de la partida.
         - nombre_archivo (str): Nombre deseado para el archivo guardado (sin extensión).
-    Devuelve: bool (True si se guardó correctamente).
+    Devuelve: 
+        bool (True si se guardó correctamente).
     """
     if not os.path.exists(CARPETA_PARTIDAS):
         os.makedirs(CARPETA_PARTIDAS)
@@ -157,7 +157,8 @@ def cargar_partida(nombre_archivo):
     Objetivo: Reconstruir y cargar el estado completo de una partida guardada previamente.
     Parámetros:
         - nombre_archivo (str): Nombre del archivo guardado a recuperar.
-        Devuelve: dict (estado de la partida cargada).
+    Devuelve: 
+        dict (estado de la partida cargada).
     """
     ruta = os.path.join(CARPETA_PARTIDAS, f"{nombre_archivo}.json")
     if not os.path.exists(ruta):
@@ -198,8 +199,8 @@ def cargar_partida(nombre_archivo):
 def listar_partidas():
     """
     Objetivo: Obtener la lista de nombres de partidas guardadas disponibles en la carpeta de guardado.
-    Parámetros: Ninguno.
-    Devuelve: list (nombres de archivos de partidas disponibles sin extensión).
+    Devuelve:
+        list (nombres de archivos de partidas disponibles sin extensión).
     """
     if not os.path.exists(CARPETA_PARTIDAS):
         return []

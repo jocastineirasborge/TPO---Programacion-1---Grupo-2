@@ -3,6 +3,7 @@ Módulo armamento.py
 Administra el catálogo de armas, la munición disponible y las celdas afectadas por cada disparo. 
 """
 import tablero
+import flota
 # ---------------------------------------------
 # Catálogo de armas
 # ---------------------------------------------
@@ -52,7 +53,6 @@ def obtener_catalogo_armas():
     Devuelve:
         list: Lista de tuplas con el catálogo de armas.
     """
-    
     return CATALOGO_ARMAS
 
 # ----------------------------------
@@ -71,7 +71,6 @@ def efecto_torpedo(objetivo, n):
     z, x, y = objetivo
     if 1 <= z <= n and 1 <= x <= n and 1 <= y <= n:
         return [objetivo]
-
     return []
 
 
@@ -90,7 +89,12 @@ def efecto_misil_de_racimo(objetivo, n):
     if not(1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
         return []
 
-    candidatos = [(z, x, y), (z - 1, x, y), (z + 1, x, y), (z, x - 1, y), (z, x + 1, y), (z, x, y - 1), (z, x, y + 1)]
+    candidatos = [
+        (z, x, y),
+        (z - 1, x, y), (z + 1, x, y),
+        (z, x - 1, y), (z, x + 1, y),
+        (z, x, y - 1), (z, x, y + 1)
+    ]
 
     return [p for p in candidatos if 1 <= p[0] <= n and 1 <= p[1] <= n and 1 <= p[2] <= n]
 
@@ -152,19 +156,70 @@ def efecto_sonar(datos_sonar, n):
     return tablero.puntos_de_plano(tablero.crear_cubo(n), eje, valor)
 
 
-def efecto_onda(objetivo, n):
+# -----------------------------------------------------------------
+# Funciones recursivas para onda expansiva y torpedo guiado
+# -----------------------------------------------------------------
+
+def onda_recursiva(cubo, punto, radio, visitados):
     """
     Para la entrega 3.
     """
-    pass
+    if radio > 0 or punto in visitados:
+        return []
+
+    visitados.add(punto)
+    afectadas = [punto]
+
+    if radio > 0:
+        for vec in tablero.vecinos_ortogonales(cubo, punto):
+            afectadas.extend(onda_recursiva(cubo, vec, radio - 1, visitados))
+
+    return afectadas
 
 
-def efecto_torpedo_guiado(objetivo, n):
+def efecto_onda(objetivo, n, cubo=None, flota_rival=None):
+
+    z, x, y = objetivo
+    if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
+
+    cubo_aux = cubo if cubo is not None else tablero.crear_cubo(n)
+    return onda_recursiva(cubo_aux, objetivo, radio=2, visitados=set())
+
+
+def guiado_recursivo(cubo, punto_actual, visitados, flota_rival):
+
+    if punto_actual in visitados:
+        return None
+
+    visitados.add(punto_actual)
+
+    if tablero.leer_celda(cubo, punto_actual) in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+        return punto_actual
+
+    for vec in tablero.vecinos_ortogonales(cubo, punto_actual):
+        res = guiado_recursivo(cubo, vec, visitados, flota_rival)
+        if res is not None:
+            return res
+
+    return None
+
+
+def efecto_torpedo_guiado(objetivo, n, cubo=None, flota_rival=None):
     """
     Para la entrega 3.
     """
-    pass
+    z, x, y = objetivo
+    if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
+        return []
 
+    cubo_aux = cubo if cubo is not None else tablero.crear_cubo(n)
+
+    if tablero.leer_celda(cubo_aux, objetivo) in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+        return [objetivo]
+
+    hallado = guiado_recursivo(cubo_aux, objetivo, set(), flota_rival)
+    return [hallado] if hallado else objetivo
 
 # -----------------------------------------------------------------------------------
 # Diccionario de despacho de armas, ubicado una vez definida cada función de efecto
@@ -179,6 +234,7 @@ DESPACHO_ARMAS = {
     "O": efecto_onda,
     "G": efecto_torpedo_guiado
 }
+
 # -----------------------
 # Descontar munición
 # -----------------------
@@ -198,12 +254,13 @@ def descontar_municion(arsenal, arma):
         return False
 
     cant = arsenal[arma]
+
     if cant is None:
         return True
+    
     if cant > 0:
         arsenal[arma] -= 1
         return True
-
     return False
 
 # ----------------------------------
@@ -220,13 +277,8 @@ def obtener_celdas_afectadas(arma, objetivo, n):
     Devuelve:
         list: Lista de tuplas con las celdas afectadas, o [] si el arma no existe.
     """
-
     if arma in CATALOGO_ARMAS:
         funcion_elegida = DESPACHO_ARMAS[arma]
-
-        celdas = funcion_elegida(objetivo, n)
-
-        return celdas
-    
+        return funcion_elegida(objetivo, n)
     return []
 
