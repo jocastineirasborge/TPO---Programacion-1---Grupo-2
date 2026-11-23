@@ -888,7 +888,7 @@ def partida_vs_maquina(estado):
                 print(tablero.dibujar_cubo(cubo_jugador, mostrar_naves=True))
 
             elif opcion == "3":
-                met = radar.comparar_busquedas(estado["jugadores"][1 - jugador]["flota"], estado["n"])
+                met = radar.comparar_busquedas(estado["jugadores"][1]["flota"], estado["n"])
                 print("\n=== MÉTRICAS DE BUSQUEDA EN RADAR ===")
                 for nave, datos in met.items():
                     print(f"Nave {nave} | Lineal {datos['lineal']} ops | Optimizada: {datos['optimizada']} ops | Recursiva: {datos['recursiva']} ops")
