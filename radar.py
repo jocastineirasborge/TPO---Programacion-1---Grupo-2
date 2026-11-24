@@ -146,8 +146,18 @@ def busqueda_recursiva_nave(flota_jugador, id_nave, n):
 # -------------------------------------------------
 
 def recorrido_capas_aux(z, x, y, n, lista):
-
-
+    """
+    Objetivo: Función auxiliar recursiva para generar la secuencia de exploración del cubo
+    3D capa por capa.
+    Parámetros:
+        - z(int): Plano o capa actual en el eje Z.
+        - x(int): Fila actual en el eje X.
+        - y(int): Columna actual en el eje Y.
+        - n(int): Tamaño de la arista del cubo.
+        - lista(list): Lista acumuladora con la secuencia de tuplas.
+    Devuelve:
+        list: Lista consolidada con todas las coordenadas (z, x, y).
+    """
     if z > n:
         return lista
     lista.append((z, x, y))
@@ -164,13 +174,26 @@ def recorrido_capas_aux(z, x, y, n, lista):
 
 
 def recorrido_recursivo_capas(n=tablero.N_POR_DEFECTO):
-
-
+    """
+    Objetivo: Inicia y coordina la exploración recursiva del cubo 3D capa por capa
+    en la dimensión Z, invocando a la función auxiliar recursiva para obtener la
+    secuencia ordenada.
+    Parámetros:
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista completa con las 3 coordenadas ordenadas según el recorrido
+        secuencial.
+    """
     return recorrido_capas_aux(1, 1, 1, n, [])
 
 
 def recorrido_octantes_aux(cubo, octante_idx, n, lista):
-
+    """
+    Objetivo: Función auxiliar recursiva para procesar secuencialmente los
+    subcubos del tablero 3D.
+    Parámetros:
+        - cubo(list): Matriz 3D
+    """
     if octante_idx > tablero.CANTIDAD_OCTANTES:
         return lista
     puntos = tablero.puntos_de_octante(cubo, octante_idx)

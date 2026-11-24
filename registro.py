@@ -15,7 +15,6 @@ CARPETA_PARTIDAS = "datos_partidas"
 def inicializar_registro():
     """
     Objetivo: Vaciar el registro de turnos en memoria para comenzar una partida nueva.
-    Parámetros: Ninguno.
     Devuelve: None
     """
     HISTORIAL_PARTIDA.clear()
@@ -39,7 +38,6 @@ def registrar_turno(num_turno, jugador, arma, objetivo, resultado):
 def obtener_historial():
     """
     Objetivo: Devuelve la lista completa con todos los turnos registrados.
-    Parámetros: Ninguno.
     Devuelve: list (lista de tuplas con el historial).
     """
     return HISTORIAL_PARTIDA
@@ -48,7 +46,6 @@ def obtener_historial():
 def obtener_ultimo_turno():
     """
     Objetivo: Consultar la información del último turno registrado.
-    Parámetros: Ninguno.
     Devuelve: tuple o None
     """
     if not HISTORIAL_PARTIDA:

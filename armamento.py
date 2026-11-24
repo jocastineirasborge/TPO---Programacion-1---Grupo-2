@@ -162,7 +162,16 @@ def efecto_sonar(datos_sonar, n):
 
 def onda_recursiva(cubo, punto, radio, visitados):
     """
-    Para la entrega 3.
+    Objetivo: Propaga recursivamente la onda expansiva en direcciones
+    ortogonales a partir de una coordenada inicial.
+    Parámetros:
+        - cubo(list): Matriz 3D que representa el tablero de juego.
+        - punto(tuple): Coordenada actual (z, x, y) desde donde se propaga la onda.
+        - radio(int): Distancia o alcance restante de la propagación recursiva.
+        - visitados(set): Conjunto acumulativo de celdas ya procesadas.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) con todas las celdas alcanzadas por el
+        efecto de la onda dentro del radio establecido.
     """
     if radio > 0 or punto in visitados:
         return []
@@ -178,7 +187,18 @@ def onda_recursiva(cubo, punto, radio, visitados):
 
 
 def efecto_onda(objetivo, n, cubo=None, flota_rival=None):
-
+    """
+    Objetivo: Validar las coordenadas objetivo e iniciar el cálculo de las
+    celdas afectadas por la onda expansiva.
+    Parámetros:
+        - objetivo(tuple): Coordenada inicial (z, x, y) apuntada para el disparo.
+        - n(int): Tamaño de la arista del cubo.
+        - cubo(list): Matriz 3D del tablero rival.
+        - flota_rival(list): Estado de la flota enemiga.
+    Devuelve:
+        list: Lista de tuplas (z, x, y) afectadas por la propagación de la onda,
+        o una lista vacía [] si la coordenada objetivo es inválida.
+    """
     z, x, y = objetivo
     if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
         return []
@@ -188,7 +208,19 @@ def efecto_onda(objetivo, n, cubo=None, flota_rival=None):
 
 
 def guiado_recursivo(cubo, punto_actual, visitados, flota_rival):
-
+    """
+    Objetivo: Busca de forma recursiva en las celdas contiguas del cubo 3D
+    la posición ocupada por una nave enemiga.
+    Parámetros:
+        - cubo(list): Matriz 3D del tablero rival.
+        - punto_actual(tuple): Coordenada (z, x, y) que se está inspeccionando
+        actualmente.
+        - visitados(set): Conjunto acumulativo de coordenadas (z, x, y) ya exploradas.
+        - flota_rival(list): Estado de la flota del jugador rival.
+    Devuelve:
+        tuple o None: Coordenada (z, x, y) de la primera celda con nave encontrada,
+        o None si no se halla ninguna en el recorrido contiguo.
+    """
     if punto_actual in visitados:
         return None
 
@@ -207,7 +239,16 @@ def guiado_recursivo(cubo, punto_actual, visitados, flota_rival):
 
 def efecto_torpedo_guiado(objetivo, n, cubo=None, flota_rival=None):
     """
-    Para la entrega 3.
+    Objetivo: Determina la celda impactada por el torpedo guiado.
+    Parámetros:
+        - objetivo(tuple): Coordenada inicial (z, x, y) apuntada para el disparo.
+        - n(int): Tamaño de la arista del cubo.
+        - cubo(list): Matriz 3D del tablero rival.
+        - flota_rival(list): Estado de la flota enemiga. 
+    Devuelve:
+        list: Lista que contiene la tupla (z, x, y) del punto del impacto
+        final, o una lista vacía [] si la coordenada objetivo es fuera
+        de límites.
     """
     z, x, y = objetivo
     if not (1 <= z <= n and 1 <= x <= n and 1 <= y <= n):
