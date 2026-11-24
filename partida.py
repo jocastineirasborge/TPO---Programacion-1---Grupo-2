@@ -516,28 +516,21 @@ def elegir_objetivo_dificil(estado, jugador, disponibles):
         tuple: Coordenada (z, x, y) seleccionada para el disparo.
     """
     rival = estado["jugadores"][1 - jugador]
-    impactos = []
+    n = estado["n"]
+    mapa_prob = radar.generar_mapa_de_probabilidad(rival["cubo"], rival["flota"], n)
 
-    for z in range(1, estado["n"] + 1):
-        for x in range(1, estado["n"] + 1):
-            for y in range(1, estado["n"] + 1):
-                punto = (z, x, y)
+    mejor_puntaje = -1
+    mejores_opciones = []
+    for punto in disponibles:
+        score = mapa_prob.get(punto, 0)
+        if score > mejor_puntaje:
+            mejor_puntaje = score
+            mejores_opciones = [punto]
+        elif score == mejor_puntaje:
+            mejores_opciones.append(punto)
 
-                if tablero.leer_celda(
-                    rival["cubo"],
-                    punto
-                ) == tablero.IMPACTO:
-                    impactos.append(punto)
-
-    candidatos = []
-    for impacto in impactos:
-        for vecino in tablero.vecinos_ortogonales(rival["cubo"], impacto):
-            if vecino in disponibles and vecino not in candidatos:
-                candidatos.append(vecino)
-
-    if candidatos:
-        return random.choice(candidatos)
-
+    if mejores_opciones:
+        return random.choice(mejores_opciones)
     return random.choice(disponibles)
 
 
