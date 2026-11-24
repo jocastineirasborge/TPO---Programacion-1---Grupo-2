@@ -202,8 +202,15 @@ def recorrido_octantes_aux(cubo, octante_idx, n, lista):
 
 
 def recorrido_recursivo_octantes(n=tablero.N_POR_DEFECTO):
-
-
+    """
+    Objetivo: Iniciar y coordinar la exploración recursiva del cubo 3D
+    por octantes.
+    Parámetros:
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        list: Lista completa con las coordenadas (z, x, y) ordenadas
+        según el recorrido recursivo.
+    """
     cubo = tablero.crear_cubo(n)
     return recorrido_octantes_aux(cubo, 1, n, [])
 
@@ -214,7 +221,7 @@ def recorrido_recursivo_octantes(n=tablero.N_POR_DEFECTO):
 def sonar_por_planos(cubo, eje, valor):
     """
     Objetivo: Inspeccionar y contar la cantidad de contactos de naves en un plano
-              determinado del cubo rival sin infringir daño.
+    determinado del cubo rival sin infringir daño.
     Parámetros:
         - cubo (list): Matriz 3D del tablero rival.
         - eje (str): Eje del plano ('z', 'x' o 'y').
@@ -228,9 +235,19 @@ def sonar_por_planos(cubo, eje, valor):
 
 
 def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECTO):
-
-
-
+    """
+    Objetivo: Calcula un mapa de probabilidad táctica sobre todas las celdas
+    del cubo rival, asignando mayor puntaje a las coordenadas sin explorar
+    adyacentes a impactos previos no hundidos y a aquellas donde aún caben
+    las naves enemigas que siguen a flote según sus restricciones.
+    Parámetros:
+        - cubo_rival(list): Matriz 3D que representa el tablero del jugador rival.
+        - flota_rival(list): Lista de tuplas con el estado de la flota del oponente.
+        - n(int): Tamaño de la arista del cubo.
+    Devuelve:
+        dict: Diccionario con todas las coordenadas (z, x, y) del cubo como claves
+        y su puntaje de probabilidad acumulado como valores.
+    """
     mapa = {}
     for z in range(1, n + 1):
         for x in range(1, n + 1):
@@ -241,7 +258,7 @@ def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECT
     naves_vivas = []
     for nave in flota_rival:
         letra, puntos, impactos = nave
-        if not flota.nave_hundida(puntos, impactos):
+        if not flota.nave_hundida(letra, puntos, impactos):
             naves_vivas.append(letra)
 
 
@@ -280,7 +297,7 @@ def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECT
                     for dz, dx, dy in direcciones:
                         cabe = True
                         for k in range(1, tam):
-                            nz, nx, ny = z + dz*k, x + dx*k + y + dy*k
+                            nz, nx, ny = z + dz*k, x + dx*k, y + dy*k
                             coor_punto = (nz, nx, ny)
                             if not tablero.es_punto_valido(cubo_rival, coor_punto):
                                 cabe = False

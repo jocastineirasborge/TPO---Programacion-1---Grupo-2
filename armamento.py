@@ -308,7 +308,7 @@ def descontar_municion(arsenal, arma):
 # Funcion principal de ejecución
 # ----------------------------------
 
-def obtener_celdas_afectadas(arma, objetivo, n):
+def obtener_celdas_afectadas(arma, objetivo, n, cubo=None, flota_rival=None):
     """
     Objetivo: Determinar la celda impactada según el arma.
     Parámetros:
