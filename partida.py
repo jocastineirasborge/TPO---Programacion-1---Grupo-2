@@ -2,8 +2,9 @@
 """
 Módulo partida.py
 
-Integrador principal del juego 'Operación Cubo'. Maneja la creación del estado de las partidas, el bucle de turnos,
-la interfaz de consola, la validación de entrada, modos de juego (1v1, vs Máquina, Máquina vs Máquina) y menús.
+Integrador principal del juego 'Operación Cubo'. Maneja la creación del estado de las partidas,
+el bucle de turnos, la interfaz de consola, la validación de entrada,
+ modos de juego (1v1, vs Máquina, Máquina vs Máquina) y menús.
 """
 
 import random
@@ -53,7 +54,7 @@ def crear_jugador(n):
         "cubo": cubo,
         "flota": [],
         "disparos": [],
-        "municion": municion_inicial()
+        "arsenal": municion_inicial()
     }
 
 
