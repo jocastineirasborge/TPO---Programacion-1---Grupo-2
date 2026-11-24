@@ -173,7 +173,7 @@ def onda_recursiva(cubo, punto, radio, visitados):
         list: Lista de tuplas (z, x, y) con todas las celdas alcanzadas por el
         efecto de la onda dentro del radio establecido.
     """
-    if radio > 0 or punto in visitados:
+    if radio < 0 or punto in visitados:
         return []
 
     visitados.add(punto)
