@@ -61,12 +61,24 @@ def test_busqueda_nave_inexistente():
     assert coords == []
     assert comps == 125
 
+@pytest.mark.parametrize("n", [10, 20])
+def test_busqueda_recursiva_y_comparar_cubos_grandes(n):
+    flota_j = flota_ejemplo()
+    coords, comps = radar.busqueda_recursiva_nave(flota_j, "F", n)
+    assert coords == [(1, 1, 1)]
+    assert comps == n * n * n
+
+    resumen = radar.comparar_busquedas(flota_j, n=n)
+    assert set(resumen.keys()) == {"F", "D", "S", "C", "P", "E"}
+    for datos in resumen.values():
+        assert datos["recursiva"] == n * n * n
+        
 
 # ------------------------------------------------------------------
 # Recorridos recursivos del cubo (Entrega 3)
 # ------------------------------------------------------------------
 
-@pytest.mark.parametrize("n", [5, 8])
+@pytest.mark.parametrize("n", [5, 8, 10, 20])
 def test_recorrido_recursivo_capas_completo(n):
     recorrido = radar.recorrido_recursivo_capas(n)
     assert len(recorrido) == n * n * n
@@ -75,7 +87,7 @@ def test_recorrido_recursivo_capas_completo(n):
     assert recorrido[-1] == (n, n, n)
 
 
-@pytest.mark.parametrize("n", [5, 8])
+@pytest.mark.parametrize("n", [5, 8, 10, 20])
 def test_recorrido_recursivo_octantes_completo(n):
     recorrido = radar.recorrido_recursivo_octantes(n)
     assert len(recorrido) == n * n * n

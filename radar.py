@@ -89,13 +89,13 @@ def busqueda_optimizada(flota_jugador, id_nave, n):
     return coordenadas_encontradas, comparaciones
 
 
-def busqueda_recursiva_aux(flota_jugador, id_nave, z, x, y, n, comparaciones, coordenadas):
+def busqueda_recursiva_aux(flota_jugador, id_nave, z, n, comparaciones, coordenadas):
     """
     Objetivo: Recorrer recursivamente las celdas (z, x, y) del cubo para localizar una nave específica. 
     Parámetros:
         - flota_jugador (list): Lista de naves que integran la flota. 
         - id_nave (str): Letra identificadora de la nave a buscar ('F', 'D', 'S', 'C', 'P', 'E').
-        - z, x, y (int): Coordenada actual en evaluación dentro del cubo. 
+        - z(int): Capa actual en evaluación dentro del cubo(1 a n).
         - n (int): Tamaño de la arista del cubo. - comparaciones (int): Contador acumulado de evaluaciones realizadas. 
         - coordenadas (list): Lista acumulada de posiciones encontradas. 
     Devuelve: 
@@ -103,26 +103,17 @@ def busqueda_recursiva_aux(flota_jugador, id_nave, z, x, y, n, comparaciones, co
     """
     if z > n:
         return coordenadas, comparaciones
-    
-    comparaciones += 1
-    pt = (z, x, y)
-    for nave in flota_jugador:
-        if nave[0] == id_nave and pt in nave[1]:
-            coordenadas.append(pt)
-            break
 
-    #Siguiente coordenada en la secuencia 3D (z, x, y)
-    ny = y + 1
-    nx = x
-    nz = z
-    if ny > n:
-        ny = 1
-        nx += 1
-        if nx > n:
-            nx = 1
-            nz += 1
+    for x in range(1, n + 1):
+        for y in range(1, n + 1):
+            comparaciones += 1
+            pt = (z, x, y)
+            for nave in flota_jugador:
+                if nave[0] == id_nave and pt in nave[1]:
+                    coordenadas.append(pt)
+                    break
 
-    return busqueda_recursiva_aux(flota_jugador, id_nave, nz, nx, ny, n, comparaciones, coordenadas)
+    return busqueda_recursiva_aux(flota_jugador, id_nave, z + 1, n, comparaciones, coordenadas)
 
 
 def busqueda_recursiva_nave(flota_jugador, id_nave, n):
@@ -136,23 +127,18 @@ def busqueda_recursiva_nave(flota_jugador, id_nave, n):
     Devuelve:
         tuple: (coordenadas_encontradas, comparaciones)
     """
-    comparaciones = 0
-    coordenadas = []
-    res_coords, res_comps = busqueda_recursiva_aux(flota_jugador, id_nave, 1, 1, 1, n, comparaciones, coordenadas)
-    return res_coords, res_comps
+    return busqueda_recursiva_aux(flota_jugador, id_nave, 1, n, 0, [])
 
 # -------------------------------------------------
 # Recorridos recursivos alternativos del cubo
 # -------------------------------------------------
 
-def recorrido_capas_aux(z, x, y, n, lista):
+def recorrido_capas_aux(z, n, lista):
     """
     Objetivo: Función auxiliar recursiva para generar la secuencia de exploración del cubo
     3D capa por capa.
     Parámetros:
-        - z(int): Plano o capa actual en el eje Z.
-        - x(int): Fila actual en el eje X.
-        - y(int): Columna actual en el eje Y.
+        - z(int): Plano o capa actual en el eje Z (1 a n).
         - n(int): Tamaño de la arista del cubo.
         - lista(list): Lista acumuladora con la secuencia de tuplas.
     Devuelve:
@@ -160,17 +146,11 @@ def recorrido_capas_aux(z, x, y, n, lista):
     """
     if z > n:
         return lista
-    lista.append((z, x, y))
-    ny = y + 1
-    nx = x
-    nz = z
-    if ny > n:
-        ny = 1
-        nx += 1
-        if nx > n:
-            nx = 1
-            nz += 1
-    return recorrido_capas_aux(nz, nx, ny, n, lista)
+
+    for x in range(1, n + 1):
+        for y in range(1, n + 1):
+            lista.append((z, x, y))
+    return recorrido_capas_aux(z + 1, n, lista)
 
 
 def recorrido_recursivo_capas(n=tablero.N_POR_DEFECTO):
@@ -184,7 +164,7 @@ def recorrido_recursivo_capas(n=tablero.N_POR_DEFECTO):
         list: Lista completa con las 3 coordenadas ordenadas según el recorrido
         secuencial.
     """
-    return recorrido_capas_aux(1, 1, 1, n, [])
+    return recorrido_capas_aux(1, n, [])
 
 
 def recorrido_octantes_aux(cubo, octante_idx, n, lista):
