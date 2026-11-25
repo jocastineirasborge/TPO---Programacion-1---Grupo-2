@@ -3,6 +3,11 @@ tablero.py - Modulo del cubo de juego (Operacion Cubo).
 
 Responsabilidad (Entrega 1): crear el cubo, validar puntos, leer y escribir
 celdas, operaciones de matrices y dibujo de una capa de z.
+Responsabilidad (Entrega 2): planos (cortes) fijando x y fijando y, puntos de
+un plano o de una recta, y vecinos de una celda.
+Responsabilidad (Entrega 3): recorridos alternativos del cubo (por capas, en
+serpiente, en espiral y por octantes), despacho de recorridos con un
+diccionario y dibujo del orden de visita.
 Este modulo NO usa print ni input: recibe datos y devuelve datos.
 
 Convenciones del cubo (contrato con el resto de los modulos):
@@ -55,6 +60,20 @@ N_MAXIMO = 20   # limite para que el dibujo por consola siga siendo legible
 
 # Punto tipeado: tres numeros separados por comas (se toleran espacios)
 PATRON_PUNTO = r"^\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$"
+
+# ------------------------------------------------------------------
+# Ejes y direcciones
+# ------------------------------------------------------------------
+
+# Orden de los ejes dentro de un punto (z, x, y)
+EJES = ("z", "x", "y")
+
+# Las seis direcciones ortogonales (una celda hacia cada cara)
+DIRECCIONES_ORTOGONALES = (
+    (-1, 0, 0), (1, 0, 0),
+    (0, -1, 0), (0, 1, 0),
+    (0, 0, -1), (0, 0, 1),
+)
 
 # ------------------------------------------------------------------
 # Cubo y validacion de puntos
@@ -220,6 +239,190 @@ def obtener_capa(cubo, z):
     return capa
 
 
+def obtener_plano_x(cubo, x):
+    """
+    Objetivo: obtener una copia del plano (corte) que fija el valor de x.
+    Parametros: cubo y x (int entre 1 y N).
+    Salida: matriz de N x N indexada [z][y], o None si x no es valido.
+    Excepciones: ninguna.
+    """
+    if type(x) != int or x < 1 or x > len(cubo):
+        return None
+    plano = []
+    for z in range(0, len(cubo)):
+        fila = []
+        for y in range(0, len(cubo[z][x - 1])):
+            fila.append(cubo[z][x - 1][y])
+        plano.append(fila)
+    return plano
+
+
+def obtener_plano_y(cubo, y):
+    """
+    Objetivo: obtener una copia del plano (corte) que fija el valor de y.
+    Parametros: cubo e y (int entre 1 y N).
+    Salida: matriz de N x N indexada [z][x], o None si y no es valido.
+    Excepciones: ninguna.
+    """
+    if type(y) != int or y < 1 or y > len(cubo):
+        return None
+    plano = []
+    for z in range(0, len(cubo)):
+        fila = []
+        for x in range(0, len(cubo[z])):
+            fila.append(cubo[z][x][y - 1])
+        plano.append(fila)
+    return plano
+
+
+# Despacho por eje: cada eje sabe como obtener su plano
+OBTENER_PLANO = {
+    "z": obtener_capa,
+    "x": obtener_plano_x,
+    "y": obtener_plano_y,
+}
+
+
+def obtener_plano(cubo, eje, valor):
+    """
+    Objetivo: obtener una copia del plano que fija un eje en un valor.
+    Parametros: cubo, eje ("z", "x" o "y") y valor (int entre 1 y N).
+    Salida: matriz de N x N, o None si el eje o el valor no son validos.
+        - eje "z": indexada [x][y]
+        - eje "x": indexada [z][y]
+        - eje "y": indexada [z][x]
+    Excepciones: ninguna.
+    """
+    if eje not in OBTENER_PLANO:
+        return None
+    return OBTENER_PLANO[eje](cubo, valor)
+
+
+def armar_punto(eje, valor, a, b):
+    """
+    Objetivo: armar un punto (z, x, y) a partir de un eje fijo y los otros dos valores.
+    Parametros: eje fijo ("z", "x" o "y"), su valor, y los valores a y b de los
+        otros dos ejes en el orden en que aparecen en EJES.
+    Salida: tupla (z, x, y). Ej: armar_punto("x", 2, 5, 7) -> (5, 2, 7).
+    Excepciones: ninguna (el eje debe ser valido).
+    """
+    valores = [a, b]
+    valores.insert(EJES.index(eje), valor)
+    return tuple(valores)
+
+
+def puntos_de_plano(cubo, eje, valor):
+    """
+    Objetivo: listar todos los puntos de un plano del cubo (util para el sonar).
+    Parametros: cubo, eje ("z", "x" o "y") y valor (int entre 1 y N).
+    Salida: lista de N * N tuplas (z, x, y), o lista vacia si eje o valor no son validos.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    if eje not in EJES or type(valor) != int or valor < 1 or valor > n:
+        return []
+    puntos = []
+    for a in range(1, n + 1):
+        for b in range(1, n + 1):
+            puntos.append(armar_punto(eje, valor, a, b))
+    return puntos
+
+
+def puntos_de_recta(cubo, punto, eje):
+    """
+    Objetivo: listar los puntos de la recta que pasa por un punto, sobre un eje
+        (util para la carga de profundidad y el barrido laser).
+    Parametros: cubo, punto (tupla z, x, y) y eje ("z", "x" o "y") sobre el que varia la recta.
+    Salida: lista de N tuplas (z, x, y) ordenadas de 1 a N sobre ese eje,
+        o lista vacia si el punto o el eje no son validos.
+    Excepciones: ninguna.
+    """
+    if eje not in EJES or not es_punto_valido(cubo, punto):
+        return []
+    posicion = EJES.index(eje)
+    puntos = []
+    for valor in range(1, len(cubo) + 1):
+        nuevo = list(punto)
+        nuevo[posicion] = valor
+        puntos.append(tuple(nuevo))
+    return puntos
+
+
+# ------------------------------------------------------------------
+# Vecinos de una celda
+# ------------------------------------------------------------------
+
+def desplazar(punto, direccion):
+    """
+    Objetivo: sumar un desplazamiento a un punto.
+    Parametros: punto (tupla z, x, y) y direccion (tupla dz, dx, dy).
+    Salida: tupla (z + dz, x + dx, y + dy); puede quedar fuera del cubo.
+    Excepciones: ninguna.
+    """
+    z, x, y = punto
+    dz, dx, dy = direccion
+    return (z + dz, x + dx, y + dy)
+
+
+def vecinos_ortogonales(cubo, punto):
+    """
+    Objetivo: obtener las celdas que comparten una cara con el punto.
+    Parametros: cubo y punto (tupla z, x, y).
+    Salida: lista de hasta 6 puntos dentro del cubo (menos en bordes y esquinas),
+        o lista vacia si el punto no es valido.
+    Excepciones: ninguna.
+    """
+    if not es_punto_valido(cubo, punto):
+        return []
+    vecinos = []
+    for i in range(0, len(DIRECCIONES_ORTOGONALES)):
+        candidato = desplazar(punto, DIRECCIONES_ORTOGONALES[i])
+        if es_punto_valido(cubo, candidato):
+            vecinos.append(candidato)
+    return vecinos
+
+
+def vecinos(cubo, punto):
+    """
+    Objetivo: obtener todas las celdas que rodean al punto, incluidas las diagonales
+        (util para la regla de separacion entre naves).
+    Parametros: cubo y punto (tupla z, x, y).
+    Salida: lista de hasta 26 puntos dentro del cubo (sin incluir al propio punto),
+        o lista vacia si el punto no es valido.
+    Excepciones: ninguna.
+    """
+    if not es_punto_valido(cubo, punto):
+        return []
+    resultado = []
+    for dz in range(-1, 2):
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                if dz != 0 or dx != 0 or dy != 0:
+                    candidato = desplazar(punto, (dz, dx, dy))
+                    if es_punto_valido(cubo, candidato):
+                        resultado.append(candidato)
+    return resultado
+
+
+def contar_vecinos_con_estado(cubo, punto, estado, solo_ortogonales=False):
+    """
+    Objetivo: contar cuantas celdas vecinas de un punto tienen un estado.
+    Parametros: cubo, punto (tupla z, x, y), estado y solo_ortogonales (bool):
+        si es True cuenta solo las 6 vecinas por cara; si no, las 26.
+    Salida: cantidad (int); 0 si el punto no es valido.
+    Excepciones: ninguna.
+    """
+    if solo_ortogonales:
+        lista = vecinos_ortogonales(cubo, punto)
+    else:
+        lista = vecinos(cubo, punto)
+    cantidad = 0
+    for i in range(0, len(lista)):
+        if leer_celda(cubo, lista[i]) == estado:
+            cantidad = cantidad + 1
+    return cantidad
+
+
 def trasponer(matriz):
     """
     Objetivo: intercambiar filas por columnas.
@@ -305,6 +508,280 @@ def vista_rival(cubo):
 
 
 # ------------------------------------------------------------------
+# Recorridos alternativos del cubo
+# ------------------------------------------------------------------
+# Cada recorrido devuelve la lista de TODOS los puntos (z, x, y) del cubo,
+# en el orden en que se visitan. Ningun recorrido modifica el cubo.
+
+def recorrido_por_capas(cubo, eje="z"):
+    """
+    Objetivo: recorrer el cubo plano por plano, fijando un eje de 1 a N.
+    Parametros: cubo y eje ("z", "x" o "y") que se fija en cada plano.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita,
+        o lista vacia si el eje no es valido.
+    Excepciones: ninguna.
+    """
+    if eje not in EJES:
+        return []
+    recorrido = []
+    for valor in range(1, len(cubo) + 1):
+        plano = puntos_de_plano(cubo, eje, valor)
+        for i in range(0, len(plano)):
+            recorrido.append(plano[i])
+    return recorrido
+
+
+def recorrido_capas_z(cubo):
+    """
+    Objetivo: recorrer el cubo por capas de z (z = 1, luego z = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "z")
+
+
+def recorrido_cortes_x(cubo):
+    """
+    Objetivo: recorrer el cubo por cortes de x (x = 1, luego x = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "x")
+
+
+def recorrido_cortes_y(cubo):
+    """
+    Objetivo: recorrer el cubo por cortes de y (y = 1, luego y = 2, ...).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    return recorrido_por_capas(cubo, "y")
+
+
+def rango_en_sentido(n, ascendente):
+    """
+    Objetivo: obtener los valores de 1 a N en el sentido pedido.
+    Parametros: n (int) y ascendente (bool).
+    Salida: lista [1, 2, ..., n] si ascendente es True; [n, ..., 2, 1] si no.
+    Excepciones: ninguna.
+    """
+    if ascendente:
+        return list(range(1, n + 1))
+    return list(range(n, 0, -1))
+
+
+def recorrido_serpiente(cubo):
+    """
+    Objetivo: recorrer el cubo en zig-zag (serpiente), de forma que cada celda
+        visitada sea vecina ortogonal de la anterior.
+        - Dentro de una fila, y alterna su sentido en cada fila nueva.
+        - Dentro de una capa, x alterna su sentido en cada capa nueva.
+        Asi, al terminar una fila (o una capa) se pasa a la contigua sin saltar.
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    recorrido = []
+    filas_recorridas = 0
+    for z in range(1, n + 1):
+        valores_x = rango_en_sentido(n, z % 2 == 1)
+        for i in range(0, len(valores_x)):
+            valores_y = rango_en_sentido(n, filas_recorridas % 2 == 0)
+            for j in range(0, len(valores_y)):
+                recorrido.append((z, valores_x[i], valores_y[j]))
+            filas_recorridas = filas_recorridas + 1
+    return recorrido
+
+
+def espiral_de_capa(cubo, z):
+    """
+    Objetivo: recorrer una capa z en espiral, desde el borde hacia el centro
+        y en sentido horario (avanza en y, baja en x, retrocede en y, sube en x).
+    Parametros: cubo y z (int entre 1 y N).
+    Salida: lista de N * N puntos (z, x, y) en orden de visita,
+        o lista vacia si z no es valido.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    if type(z) != int or z < 1 or z > n:
+        return []
+    recorrido = []
+    arriba = 1
+    abajo = n
+    izquierda = 1
+    derecha = n
+    while arriba <= abajo and izquierda <= derecha:
+        # Borde superior: fila x = arriba, de izquierda a derecha
+        for y in range(izquierda, derecha + 1):
+            recorrido.append((z, arriba, y))
+        # Borde derecho: columna y = derecha, hacia abajo
+        for x in range(arriba + 1, abajo + 1):
+            recorrido.append((z, x, derecha))
+        # Borde inferior: fila x = abajo, de derecha a izquierda (si quedan filas)
+        if arriba < abajo:
+            for y in range(derecha - 1, izquierda - 1, -1):
+                recorrido.append((z, abajo, y))
+        # Borde izquierdo: columna y = izquierda, hacia arriba (si quedan columnas)
+        if izquierda < derecha:
+            for x in range(abajo - 1, arriba, -1):
+                recorrido.append((z, x, izquierda))
+        arriba = arriba + 1
+        abajo = abajo - 1
+        izquierda = izquierda + 1
+        derecha = derecha - 1
+    return recorrido
+
+
+def recorrido_espiral(cubo):
+    """
+    Objetivo: recorrer el cubo capa por capa de z, cada capa en espiral
+        desde el borde hacia el centro.
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    recorrido = []
+    for z in range(1, len(cubo) + 1):
+        capa = espiral_de_capa(cubo, z)
+        for i in range(0, len(capa)):
+            recorrido.append(capa[i])
+    return recorrido
+
+
+# Octantes: el cubo se parte a la mitad en cada eje y quedan 8 sub-cubos.
+# La mitad inferior de un eje va de 1 a N // 2 y la superior de N // 2 + 1 a N
+# (el mismo corte que usa flota.py para submarino y portaaviones).
+# Numeracion: octante = 1 + 4 * mitad_z + 2 * mitad_x + mitad_y,
+# con mitad = 0 (inferior) o 1 (superior). El octante 1 contiene (1, 1, 1)
+# y el octante 8 contiene (N, N, N).
+CANTIDAD_OCTANTES = 8
+
+
+def mitades_de_eje(n):
+    """
+    Objetivo: obtener los limites de las dos mitades de un eje.
+    Parametros: n (int) tamanio del eje.
+    Salida: lista [(1, n // 2), (n // 2 + 1, n)] con los limites (inclusive)
+        de la mitad inferior y de la superior.
+    Excepciones: ninguna.
+    """
+    mitad = n // 2
+    return [(1, mitad), (mitad + 1, n)]
+
+
+def octante_de(cubo, punto):
+    """
+    Objetivo: informar a que octante pertenece un punto.
+    Parametros: cubo y punto (tupla z, x, y).
+    Salida: numero de octante (int de 1 a 8), o None si el punto no es valido.
+    Excepciones: ninguna.
+    """
+    if not es_punto_valido(cubo, punto):
+        return None
+    mitad = len(cubo) // 2
+    z, x, y = punto
+    mitad_z = int(z > mitad)
+    mitad_x = int(x > mitad)
+    mitad_y = int(y > mitad)
+    return 1 + 4 * mitad_z + 2 * mitad_x + mitad_y
+
+
+def puntos_de_octante(cubo, numero):
+    """
+    Objetivo: listar los puntos de un octante del cubo.
+    Parametros: cubo y numero de octante (int de 1 a 8).
+    Salida: lista de puntos (z, x, y) recorridos por capas de z dentro del octante,
+        o lista vacia si el numero no es valido.
+    Excepciones: ninguna.
+    """
+    if type(numero) != int or numero < 1 or numero > CANTIDAD_OCTANTES:
+        return []
+    mitades = mitades_de_eje(len(cubo))
+    indice = numero - 1
+    desde_z, hasta_z = mitades[indice // 4]
+    desde_x, hasta_x = mitades[(indice // 2) % 2]
+    desde_y, hasta_y = mitades[indice % 2]
+    puntos = []
+    for z in range(desde_z, hasta_z + 1):
+        for x in range(desde_x, hasta_x + 1):
+            for y in range(desde_y, hasta_y + 1):
+                puntos.append((z, x, y))
+    return puntos
+
+
+def recorrido_por_octantes(cubo):
+    """
+    Objetivo: recorrer el cubo octante por octante (del 1 al 8).
+    Parametros: cubo.
+    Salida: lista de N * N * N puntos (z, x, y) en orden de visita.
+    Excepciones: ninguna.
+    """
+    recorrido = []
+    for numero in range(1, CANTIDAD_OCTANTES + 1):
+        octante = puntos_de_octante(cubo, numero)
+        for i in range(0, len(octante)):
+            recorrido.append(octante[i])
+    return recorrido
+
+
+# ------------------------------------------------------------------
+# Despacho de recorridos
+# ------------------------------------------------------------------
+# La seleccion del recorrido se resuelve con un diccionario nombre -> funcion
+# (la consigna no permite una cadena de if / elif para este despacho).
+# Todas las funciones reciben el cubo y devuelven la lista de puntos visitados.
+# radar.py puede sumar sus recorridos recursivos con la misma forma.
+
+RECORRIDOS = {
+    "capas_z": recorrido_capas_z,
+    "cortes_x": recorrido_cortes_x,
+    "cortes_y": recorrido_cortes_y,
+    "serpiente": recorrido_serpiente,
+    "espiral": recorrido_espiral,
+    "octantes": recorrido_por_octantes,
+}
+
+NOMBRES_RECORRIDOS = {
+    "capas_z": "Por capas de z",
+    "cortes_x": "Por cortes de x",
+    "cortes_y": "Por cortes de y",
+    "serpiente": "En serpiente (zig-zag)",
+    "espiral": "En espiral por capas",
+    "octantes": "Por octantes",
+}
+
+
+def listar_recorridos():
+    """
+    Objetivo: listar los recorridos disponibles (util para armar el menu).
+    Parametros: ninguno.
+    Salida: lista de tuplas (clave, nombre legible), en el orden de RECORRIDOS.
+    Excepciones: ninguna.
+    """
+    opciones = []
+    for clave in RECORRIDOS:
+        opciones.append((clave, NOMBRES_RECORRIDOS[clave]))
+    return opciones
+
+
+def recorrer(cubo, nombre):
+    """
+    Objetivo: ejecutar un recorrido del cubo elegido por su nombre.
+    Parametros: cubo y nombre (str), una de las claves de RECORRIDOS.
+    Salida: lista de puntos (z, x, y) en orden de visita,
+        o lista vacia si el nombre no existe.
+    Excepciones: ninguna.
+    """
+    if nombre not in RECORRIDOS:
+        return []
+    return RECORRIDOS[nombre](cubo)
+
+
+# ------------------------------------------------------------------
 # Dibujo
 # ------------------------------------------------------------------
 
@@ -348,6 +825,56 @@ def texto_referencias(mostrar_naves):
     return "Referencias: " + "   ".join(partes)
 
 
+# Como se dibuja cada plano: titulo, eje de las filas, eje de las columnas y si
+# la matriz que devuelve obtener_plano hay que trasponerla para dibujarla.
+# - Capa z:  obtener_plano da [x][y]; se traspone para ver filas y, columnas x.
+# - Corte x: obtener_plano da [z][y]; filas z, columnas y.
+# - Corte y: obtener_plano da [z][x]; filas z, columnas x.
+FORMATO_PLANOS = {
+    "z": {"titulo": "CAPA", "filas": "y", "columnas": "x", "trasponer": True},
+    "x": {"titulo": "CORTE", "filas": "z", "columnas": "y", "trasponer": False},
+    "y": {"titulo": "CORTE", "filas": "z", "columnas": "x", "trasponer": False},
+}
+
+
+def dibujar_plano(cubo, eje, valor, mostrar_naves=True, con_referencias=True):
+    """
+    Objetivo: armar el dibujo de un plano del cubo que fija un eje en un valor.
+    Parametros: cubo, eje ("z", "x" o "y"), valor (int), mostrar_naves (bool)
+        y con_referencias (bool).
+    Salida: cadena lista para imprimir, o None si el eje o el valor no son validos.
+    Excepciones: ninguna.
+    """
+    if eje not in FORMATO_PLANOS:
+        return None
+    plano = obtener_plano(cubo, eje, valor)
+    if plano is None:
+        return None
+    formato = FORMATO_PLANOS[eje]
+    if formato["trasponer"]:
+        plano = trasponer(plano)
+    n = len(plano)
+    ancho = len(formato["filas"] + str(n)) + 1
+
+    lineas = []
+    lineas.append(f"========= {formato['titulo']} {eje} = {valor} =========")
+    encabezado = completar("", ancho)
+
+    for columna in range(0, n):
+        encabezado = encabezado + completar(formato["columnas"] + str(columna + 1), ancho)
+    lineas.append(encabezado.rstrip())
+
+    for fila in range(0, n):
+        linea = completar(formato["filas"] + str(fila + 1), ancho)
+        for columna in range(0, n):
+            linea = linea + completar(simbolo_de(plano[fila][columna], mostrar_naves), ancho)
+        lineas.append(linea.rstrip())
+
+    if con_referencias:
+        lineas.append(texto_referencias(mostrar_naves))
+    return "\n".join(lineas)
+
+
 def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
     """
     Objetivo: armar el dibujo de la capa z (filas y, columnas x).
@@ -355,31 +882,27 @@ def dibujar_capa(cubo, z, mostrar_naves=True, con_referencias=True):
     Salida: cadena lista para imprimir, o None si z no es valido.
     Excepciones: ninguna.
     """
-    capa = obtener_capa(cubo, z)
-    if capa is None:
-        return None
-    # La capa esta indexada [x][y]; para mostrar filas y y columnas x se traspone.
-    vista = trasponer(capa)
-    n = len(vista)
-    ancho = len("y" + str(n)) + 1
+    return dibujar_plano(cubo, "z", z, mostrar_naves, con_referencias)
 
-    lineas = []
-    lineas.append(f"========= CAPA z = {z} =========")
-    encabezado = completar("", ancho)
 
-    for x in range(0, n):
-        encabezado = encabezado + completar("x" + str(x + 1), ancho)
-    lineas.append(encabezado.rstrip())
+def dibujar_corte_x(cubo, x, mostrar_naves=True, con_referencias=True):
+    """
+    Objetivo: armar el dibujo del corte que fija x (filas z, columnas y).
+    Parametros: cubo, x (int), mostrar_naves (bool) y con_referencias (bool).
+    Salida: cadena lista para imprimir, o None si x no es valido.
+    Excepciones: ninguna.
+    """
+    return dibujar_plano(cubo, "x", x, mostrar_naves, con_referencias)
 
-    for y in range(0, n):
-        fila = completar("y" + str(y + 1), ancho)
-        for x in range(0, n):
-            fila = fila + completar(simbolo_de(vista[y][x], mostrar_naves), ancho)
-        lineas.append(fila.rstrip())
 
-    if con_referencias:
-        lineas.append(texto_referencias(mostrar_naves))
-    return "\n".join(lineas)
+def dibujar_corte_y(cubo, y, mostrar_naves=True, con_referencias=True):
+    """
+    Objetivo: armar el dibujo del corte que fija y (filas z, columnas x).
+    Parametros: cubo, y (int), mostrar_naves (bool) y con_referencias (bool).
+    Salida: cadena lista para imprimir, o None si y no es valido.
+    Excepciones: ninguna.
+    """
+    return dibujar_plano(cubo, "y", y, mostrar_naves, con_referencias)
 
 
 def dibujar_cubo(cubo, mostrar_naves=True):
@@ -394,3 +917,44 @@ def dibujar_cubo(cubo, mostrar_naves=True):
         bloques.append(dibujar_capa(cubo, z, mostrar_naves, False))
     bloques.append(texto_referencias(mostrar_naves))
     return "\n\n".join(bloques)
+
+
+def dibujar_orden_recorrido(cubo, recorrido, z):
+    """
+    Objetivo: armar el dibujo de una capa z mostrando en cada celda en que
+        posicion del recorrido fue visitada (filas y, columnas x, como dibujar_capa).
+    Parametros: cubo, recorrido (lista de puntos z, x, y, por ejemplo la que
+        devuelve recorrer) y z (int entre 1 y N).
+        Las celdas de la capa que no estan en el recorrido se dibujan con ".".
+    Salida: cadena lista para imprimir, o None si z no es valido.
+    Excepciones: ninguna.
+    """
+    n = len(cubo)
+    if type(z) != int or z < 1 or z > n:
+        return None
+    # orden[y][x]: posicion (desde 1) en que se visito la celda, o None
+    orden = []
+    for fila in range(0, n):
+        orden.append([None] * n)
+    for i in range(0, len(recorrido)):
+        punto = recorrido[i]
+        if es_punto_valido(cubo, punto) and punto[0] == z:
+            orden[punto[2] - 1][punto[1] - 1] = i + 1
+
+    ancho = max(len(str(len(recorrido))), len("y" + str(n))) + 1
+    lineas = []
+    lineas.append(f"===== ORDEN DE VISITA - CAPA z = {z} =====")
+    encabezado = completar("", ancho)
+    for x in range(1, n + 1):
+        encabezado = encabezado + completar("x" + str(x), ancho)
+    lineas.append(encabezado.rstrip())
+    for y in range(1, n + 1):
+        linea = completar("y" + str(y), ancho)
+        for x in range(1, n + 1):
+            valor = orden[y - 1][x - 1]
+            if valor is None:
+                linea = linea + completar(".", ancho)
+            else:
+                linea = linea + completar(str(valor), ancho)
+        lineas.append(linea.rstrip())
+    return "\n".join(lineas)
