@@ -426,8 +426,8 @@ def ejecutar_turno(estado, jugada):
                             tablero.escribir_celda(cubo_rival, celda_revelada, tablero.DETECTADO)
                             print(f"¡EFECTO DESTRUCTOR! Se reveló una nave rival en {tablero.punto_a_texto(celda_revelada)}.")
 
-                elif estado_actual == tablero.SIN_EXPLORAR:
-                    tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
+            elif estado_actual == tablero.SIN_EXPLORAR:
+                tablero.escribir_celda(cubo_rival, punto, tablero.AGUA_MARCADA)
 
         if naves_hundidas_nombres:
             resultado_str = f"Hundido ({', '.join(naves_hundidas_nombres)})"
