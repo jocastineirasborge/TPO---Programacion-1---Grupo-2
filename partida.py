@@ -390,7 +390,7 @@ def ejecutar_turno(estado, jugada):
         for punto in celdas_afectadas:
             estado_actual = tablero.leer_celda(cubo_rival, punto)
 
-            if estado_actual in (tablero.NAVE_OCULTA, tablero.DETECTADO):
+            if estado_actual in (tablero.NAVE_OCULTA, tablero.DETECTADO, tablero.IMPACTO):
                 impacto_valido, letra, estado_impacto = flota.registrar_impacto(flota_rival, punto, arma)
 
                 if estado_impacto == "inmune":
@@ -495,6 +495,7 @@ def objetivos_disponibles(estado, jugador):
         en el historial de disparos de dicho jugador.
     """
     disparos_hechos = estado["jugadores"][jugador].get("disparos",[])
+    cubo_rival = estado["jugadores"][1 - jugador]["cubo"]
     n = estado["n"]
     disponibles = []
 
@@ -504,6 +505,14 @@ def objetivos_disponibles(estado, jugador):
                 punto = (z, x, y)
                 if punto not in disparos_hechos:
                     disponibles.append(punto)
+
+    if not disponibles:
+        for z in range(1, n + 1):
+            for x in range(1, n + 1):
+                for y in range(1, n + 1):
+                    punto = (z, x, y)
+                    if tablero.leer_celda(cubo_rival, punto) == tablero.IMPACTO:
+                        disponibles.append(punto)
 
     return disponibles
 
@@ -727,8 +736,12 @@ def guardar_partida(estado):
             print("Nombre inválido. Use letras, números, _ o -.")
     
     try:
+        ya_existia = nombre in registro.listar_partidas()
         registro.guardar_partida(estado, nombre)
-        print(f"¡Partida {nombre} guardada exitósamente!")
+        if ya_existia:
+            print(f"¡'{nombre}' actualizada exitosamente!")
+        else:
+            print(f"¡Partida {nombre} guardada exitósamente!")
         return True
 
     except Exception as error:
@@ -769,6 +782,47 @@ def continuar_partida():
         return None
 
 
+def eliminar_partidas():
+    """
+    Objetivo: Lista por consola las partidas guardadas e interactúa con el usuario
+    para seleccionar y eliminar una partida previa del disco.
+    Devuelve:
+        bool: True si se eliminó la partida exitosamente, False si no hay partidas
+        guardadas, el usuario cancela u ocurre un error.
+    """
+    partidas = registro.listar_partidas()
+    if not partidas:
+        print("No se encontraron partidas guardadas.")
+        return False
+
+    print("\nPartidas disponibles: ")
+    for idx, nom in enumerate(partidas, 1):
+        print(f"{idx} - {nom}")
+
+    sel = input("Seleccione el número o nombre de la partida a eliminar (Enter para cancelar): ").strip()
+    if not sel:
+        print("Eliminación cancelada.")
+        return False
+
+    if sel.isdigit() and 1 <= int(sel) <= len(partidas):
+        nombre_elegido = partidas[int(sel) - 1]
+    else:
+        nombre_elegido = sel
+
+    confirmar = input(f"¿Está seguro de que desea eliminar '{nombre_elegido}'? (s/n): ").strip().lower()
+    if confirmar != "s":
+        print("Eliminación cancelada.")
+        return False
+
+    try:
+        registro.eliminar_partida(nombre_elegido)
+        print(f"¡Partida '{nombre_elegido}' eliminada exitosamente!")
+        return True
+    except Exception as error:
+        print(f"No se pudo eliminar la partida: {error}")
+        return False
+
+    
 def mostrar_resumen_final():
     """
     Objetivo: Obtiene las estadísticas globales de la partida e imprime por consola
