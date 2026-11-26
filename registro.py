@@ -72,7 +72,7 @@ def obtener_estadisticas_jugador(jugador_num):
             armas[arma] = armas.get(arma, 0) + 1
             if res == "Impacto" or str(res).startswith("Hundido") or "contactos" in str(res):
                 impactos += 1
-            elif res == "Agua":
+            elif res == "Agua" or str(res).startswith("0 contactos"):
                 agua += 1
 
     efectividad_str = f"{(impactos / disparos) * 100:.2f}%" if disparos > 0 else "0.00%"

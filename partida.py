@@ -596,6 +596,9 @@ def turno_maquina(estado):
 
     estado["jugadores"][jugador]["disparos"].append(objetivo)
 
+    codigo_arma = jugada["arma"]
+    nombre_arma = armamento.CATALOGO_ARMAS.get(codigo_arma, {}).get("nombre", codigo_arma)
+    print(f"La máquina atacó con: {nombre_arma} ({codigo_arma})")
     return ejecutar_turno(estado, jugada)
 
 # -----------------------------------------------
