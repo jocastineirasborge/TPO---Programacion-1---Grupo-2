@@ -228,29 +228,43 @@ def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECT
         dict: Diccionario con todas las coordenadas (z, x, y) del cubo como claves
         y su puntaje de probabilidad acumulado como valores.
     """
-    mapa = {}
-    for z in range(1, n + 1):
-        for x in range(1, n + 1):
-            for y in range(1, n + 1):
-                mapa[(z, x, y)] = 0
+    mapa = {(z, x, y): 0 for z in range(1, n + 1) for x in range(1, n + 1) for y in range(1, n + 1)}
 
-
+    zona_segura_hundidos = set()
     naves_vivas = []
-    for nave in flota_rival:
-        letra, puntos, impactos = nave
-        if not flota.nave_hundida(letra, puntos, impactos):
-            naves_vivas.append(letra)
+    celdas_p_pendientes = set()
 
+    for letra, puntos, impactos in flota_rival:
+        if flota.nave_hundida(letra, puntos, impactos):
+            for pz, px, py in puntos:
+                for dz in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        for dy in (-1, 0, 1):
+                            nz, nx, ny = pz + dz, px + dx, py + dy
+                            if 1 <= nz <= n and 1 <= nx <= n and 1 <= ny <= n:
+                                zona_segura_hundidos.add((nz, nx, ny))
+        else:
+            naves_vivas.append(letra)
+            if letra == "P":
+                for p in puntos:
+                    if impactos.get(p, 0) < 2:
+                        celdas_p_pendientes.add(p)
 
     for z in range(1, n + 1):
         for x in range(1, n + 1):
             for y in range(1, n + 1):
                 punto = (z, x, y)
-                if tablero.leer_celda(cubo_rival, punto) == tablero.IMPACTO:
+                if punto in zona_segura_hundidos:
+                    continue
+                estado_celda = tablero.leer_celda(cubo_rival, punto)
+                if estado_celda == tablero.IMPACTO:
+                    if punto in celdas_p_pendientes:
+                        mapa[punto] += 40
                     for vec in tablero.vecinos_ortogonales(cubo_rival, punto):
-                        if tablero.leer_celda(cubo_rival, vec) == tablero.SIN_EXPLORAR:
-                            mapa[vec] += 15
-
+                        if vec not in zona_segura_hundidos and tablero.leer_celda(cubo_rival, vec):
+                            mapa[vec] += 25
+                elif estado_celda == tablero.DETECTADO:
+                    mapa[punto] += 35
 
     catalogo = flota.obtener_catalogo_naves()
     direcciones = [(1,0,0), (-1,0,0), (0,1,0), (0,-1,0), (0,0,1), (0,0,-1)]
@@ -259,7 +273,9 @@ def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECT
         for x in range(1, n + 1):
             for y in range(1, n + 1):
                 punto = (z, x, y)
-                if tablero.leer_celda(cubo_rival, punto) != tablero.SIN_EXPLORAR:
+                if punto in zona_segura_hundidos:
+                    continue
+                if tablero.leer_celda(cubo_rival, punto) not in (tablero.SIN_EXPLORAR, tablero.NAVE_OCULTA, tablero.DETECTADO):
                     continue
 
                 for letra in naves_vivas:
@@ -273,22 +289,24 @@ def generar_mapa_de_probabilidad(cubo_rival, flota_rival, n=tablero.N_POR_DEFECT
                         continue
 
                     tam = catalogo.get(letra, {}).get("celdas", 1)
+                    if tam == 1:
+                        mapa[punto] += 1
+                        continue
 
                     for dz, dx, dy in direcciones:
                         cabe = True
                         for k in range(1, tam):
                             nz, nx, ny = z + dz*k, x + dx*k, y + dy*k
                             coor_punto = (nz, nx, ny)
-                            if not tablero.es_punto_valido(cubo_rival, coor_punto):
+                            if not tablero.es_punto_valido(cubo_rival, coor_punto) or coor_punto in zona_segura_hundidos:
                                 cabe = False
                                 break
-                            coor_val = tablero.leer_celda(cubo_rival, coor_punto)
-                            if coor_val in (tablero.AGUA_MARCADA, tablero.HUNDIDO):
+                            if tablero.leer_celda(cubo_rival, coor_punto) in (tablero.AGUA_MARCADA, tablero.HUNDIDO):
                                 cabe = False
                                 break
 
-                    if cabe:
-                        mapa[punto] += 1
+                        if cabe:
+                            mapa[punto] += 2
 
     return mapa
 

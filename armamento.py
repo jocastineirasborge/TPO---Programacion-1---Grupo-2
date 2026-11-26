@@ -320,6 +320,8 @@ def obtener_celdas_afectadas(arma, objetivo, n, cubo=None, flota_rival=None):
     """
     if arma in CATALOGO_ARMAS:
         funcion_elegida = DESPACHO_ARMAS[arma]
+        if arma in ("O", "G"):
+            return funcion_elegida(objetivo, n, cubo, flota_rival)
         return funcion_elegida(objetivo, n)
     return []
 

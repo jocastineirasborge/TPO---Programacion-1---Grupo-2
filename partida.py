@@ -499,20 +499,12 @@ def objetivos_disponibles(estado, jugador):
     n = estado["n"]
     disponibles = []
 
-    for z in range(1, estado["n"] + 1):
-        for x in range(1, estado["n"] + 1):
-            for y in range(1, estado["n"] + 1):
+    for z in range(1, n + 1):
+        for x in range(1, n + 1):
+            for y in range(1, n + 1):
                 punto = (z, x, y)
-                if punto not in disparos_hechos:
+                if punto not in disparos_hechos or tablero.leer_celda(cubo_rival, punto) == tablero.IMPACTO:
                     disponibles.append(punto)
-
-    if not disponibles:
-        for z in range(1, n + 1):
-            for x in range(1, n + 1):
-                for y in range(1, n + 1):
-                    punto = (z, x, y)
-                    if tablero.leer_celda(cubo_rival, punto) == tablero.IMPACTO:
-                        disponibles.append(punto)
 
     return disponibles
 
@@ -548,6 +540,28 @@ def elegir_objetivo_dificil(estado, jugador, disponibles):
     return random.choice(disponibles)
 
 
+def elegir_jugada_dificil(estado, jugador, objetivo):
+    """
+    Objetivo: Selecciona el arma disponible más conveniente para
+    la máquina en dificultad dificil.
+    Parámetros:
+        - 
+    """
+    arsenal = estado["jugadores"][jugador].get("arsenal", {})
+
+    for arma in ("O", "R", "C", "L", "G"):
+        if arsenal.get(arma, 0) and arsenal[arma] > 0:
+            if arma == "L":
+                eje = random.choice(("x", "y"))
+                return {
+                    "arma": "L",
+                    "objetivo": tablero.punto_a_texto(objetivo),
+                    "eje": eje
+                }
+            return {"arma": arma, "punto": objetivo}
+
+    return {"arma": "T", "punto": objetivo}
+
 def turno_maquina(estado):
     """
     Objetivo: Seleccionar una coordenada de disparo de manera aleatoria.
@@ -575,11 +589,12 @@ def turno_maquina(estado):
 
     if dificultad == "dificil":
         objetivo = elegir_objetivo_dificil(estado, jugador, disponibles)
+        jugada = elegir_jugada_dificil(estado, jugador, objetivo)
     else:
         objetivo = random.choice(disponibles)
+        jugada = {"arma": "T", "punto": objetivo}
 
     estado["jugadores"][jugador]["disparos"].append(objetivo)
-    jugada = {"arma": "T", "punto": objetivo}
 
     return ejecutar_turno(estado, jugada)
 
@@ -831,9 +846,9 @@ def mostrar_resumen_final():
         None: Imprime directamente por consola el informe final.
     """
     estadisticas = registro.obtener_estadisticas_partida()
-    print("\n========================================")
+    print("\n=============================================================")
     print(f"     RESUMEN FINAL DE LA PARTIDA - TOTAL TURNOS: {estadisticas['total_turnos']}")
-    print("\n========================================")
+    print("\n=============================================================")
     for nombre_jugador, datos in estadisticas["jugadores"].items():
         print(f"\nEstadísticas de {nombre_jugador}: ")
         print(f"- Disparos realizados: {datos['disparos']}")
@@ -989,7 +1004,7 @@ def partida_maquina_vs_maquina(estado):
             break
 
         if estado["terminada"]:
-            print(f"\n¡TERMINÓ EL JUEGO! GANADOR: MÁQUINA {estado['ganador']} + 1")
+            print(f"\n¡TERMINÓ EL JUEGO! GANADOR: MÁQUINA {estado['ganador'] + 1}")
             mostrar_resumen_final()
 
 

@@ -70,7 +70,7 @@ def obtener_estadisticas_jugador(jugador_num):
         if jugador == jugador_num:
             disparos += 1
             armas[arma] = armas.get(arma, 0) + 1
-            if res in ("Impacto", "Hundido") or "contactos" in str(res):
+            if res == "Impacto" or str(res).startswith("Hundido") or "contactos" in str(res):
                 impactos += 1
             elif res == "Agua":
                 agua += 1
