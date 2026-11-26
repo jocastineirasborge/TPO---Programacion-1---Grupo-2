@@ -212,7 +212,7 @@ def eliminar_partida(nombre_archivo):
     Devuelve:
         bool: True si el archivo fue eliminado correctamente.
     """
-    ruta = os.path.json(CARPETA_PARTIDAS, f"{nombre_archivo}.json")
+    ruta = os.path.join(CARPETA_PARTIDAS, f"{nombre_archivo}.json")
     if not os.path.exists(ruta):
         raise FileNotFoundError(f"No existe la partida guardada '{nombre_archivo}'.")
     os.remove(ruta)

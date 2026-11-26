@@ -1010,7 +1010,8 @@ def menu_principal():
         print("2 - Partida uno contra la máquina")
         print("3 - Partida máquina contra máquina")
         print("4 - Continuar una partida guardada")
-        print("5 - Salir")
+        print("5 - Eliminar una partida guardada")
+        print("6 - Salir")
 
         opcion = input("Opción: ").strip()
 
@@ -1038,6 +1039,9 @@ def menu_principal():
                         partida_maquina_vs_maquina(estado)
 
             elif opcion == "5":
+                eliminar_partidas()
+
+            elif opcion == "6":
                 print("Programa finalizado.")
                 break
 
