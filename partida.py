@@ -417,7 +417,7 @@ def ejecutar_turno(estado, jugada):
                         print("¡Estación Orbital destruida! Se ha otorgado una recompensa al atacante.")
 
                 elif estado_impacto == "averiada":
-                    print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}")
+                    print(f"¡IMPACTO en {tablero.punto_a_texto(punto)}!")
 
                     if letra == "D":
                         celda_revelada = flota.revelar_celda_rival(flota_rival, cubo_rival)
